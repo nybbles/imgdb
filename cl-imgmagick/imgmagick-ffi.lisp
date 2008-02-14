@@ -1,4 +1,4 @@
-(in-package :img-io)
+(in-package :cl-imgmagick)
 
 (define-foreign-library libWand
   (:darwin "libWand.dylib")

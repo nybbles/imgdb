@@ -1,5 +1,5 @@
 (in-package #:cl-user)
 
-(defpackage :img-io
+(defpackage :cl-imgmagick
   (:use :cl :cffi)
   (:export nil))
