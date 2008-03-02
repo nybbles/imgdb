@@ -27,10 +27,8 @@
 (defcfun ("MagickNewImage" magick-new-image)
     magickbool
   (wand :pointer) (width :long) (height :long) (background :pointer))
-
-(defcfun ("GetImageFromMagickWand" get-image-from-magick-wand)
-    :pointer (wand :pointer))
-(defcfun ("MagickDestroyImage" magick-destroy-image) :pointer (image :pointer))
+(defcfun ("MagickRemoveImage" magick-remove-image)
+    magickbool (wand :pointer))
 
 (defcfun ("MagickDisplayImage" magick-display-image)
     magickbool (wand :pointer) (server :string))
