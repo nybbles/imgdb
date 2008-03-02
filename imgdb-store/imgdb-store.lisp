@@ -1,14 +1,14 @@
-(in-package :imgdb-db-backend)
+(in-package :imgdb-store)
 
 (defparameter *img-types* '("jpeg" "jpg"))
 (defparameter *default-dbconn-spec* '())
 (defparameter *img-table-name* '[imgs])
 
-(defun index-directory (directory dbconn)
-  "Indexes all images under the given directory"
+(defun index-directory (imgdrop imgstore dbconn)
+  "Indexes all images in imgdrop by moving them to the imgstore and creating an entry in the imgstore database."
   (let ((numimgs 0))
     (walk-directory
-     directory
+     imgdrop
      (lambda (x)
        (incf numimgs)
        (handler-bind ((sql-database-data-error #'skip-img-record-creation))
@@ -33,7 +33,8 @@
   (let* ((img-digest (byte-array-to-hex-string (digest-file :md5 img-url)))
          (img-url (concatenate 'string "file://" (namestring img-url)))
          (img-urldigest (byte-array-to-hex-string 
-                     (digest-sequence :md5 (ascii-string-to-byte-array img-url)))))
+                     (digest-sequence
+                      :md5 (ascii-string-to-byte-array img-url)))))
     (restart-case
         (insert-records :into *img-table-name*
                         :attributes '([digest] [urldigest] [url])
@@ -45,7 +46,8 @@
 (defun remove-img-record (img-url dbconn)
   "Removes the record indexed by id from the database"
   (let ((img-urldigest (byte-array-to-hex-string
-                        (digest-sequence :md5 (ascii-string-to-byte-array img-url)))))
+                        (digest-sequence
+                         :md5 (ascii-string-to-byte-array img-url)))))
     (delete-records :from *img-table-name*
                     :where [= [urldigest] img-urldigest]
                     :database dbconn)))
@@ -61,6 +63,7 @@
   (create-database dbconn :database-type db-type))
 (defun destroy-img-database (dbconn db-type)
   (destroy-database dbconn :database-type db-type))
+(defun img-database-exists (dbconn db-type))
 
 (defun create-img-table (dbconn)
   (create-table *img-table-name*
@@ -70,3 +73,4 @@
                 :database dbconn))
 (defun drop-img-table (dbconn)
   (drop-table *img-table-name* :database dbconn))
+(defun img-table-exists (dbconn))
