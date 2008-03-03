@@ -36,28 +36,28 @@
 (defgeneric read-image (filename &key channels read-pixels))
 (defgeneric write-image (image &optional filename))
 
-(defgeneric orientation (image))
-(defgeneric date (image))
-(defgeneric height (image))
-(defgeneric width (image))
+(defgeneric image-orientation (image))
+(defgeneric image-date (image))
+(defgeneric image-height (image))
+(defgeneric image-width (image))
 
 (defclass image ()
-  ((exif :reader exif
+  ((exif :reader image-exif
          :type hash-table
          :initarg :exif
          :initform (error "EXIF not provided."))
-   (filename :reader filename
+   (filename :reader image-filename
              :type string
              :initarg :filename
              :initform (error "Filename not provided."))
-   (pixels :reader pixels
+   (pixels :reader image-pixels
            :type foreign-pointer)
-   (channels :reader channels
+   (channels :reader image-channels
              :type string
              :initarg :channels
              :initform (error "Channels not provided."))
    (wand :type foreign-pointer
-         :reader wand)))
+         :reader image-wand)))
 
 (defmethod initialize-instance :after
     ((self image) &key wand pixels)
@@ -99,7 +99,7 @@
 
 (defmethod write-image ((image image) &optional filename)
   (check-magick-initialized)
-  (magick-write-image (wand image)
+  (magick-write-image (image-wand image)
                       (when filename filename)))
 
 (defparameter *exif-date-scanner*
@@ -111,11 +111,11 @@
       (*exif-date-scanner* date-str)
     (list year month day hour minute second)))
 
-(defmethod orientation ((image image))
-  (gethash "Orientation" (exif image)))
-(defmethod date ((image image))
-  (parse-exif-date (gethash "DateTimeDigitized" (exif image))))
-(defmethod height ((image image))
-  (gethash "ExifImageLength" (exif image)))
-(defmethod width ((image image))
-  (gethash "ExifImageWidth" (exif image)))
+(defmethod image-orientation ((image image))
+  (gethash "Orientation" (image-exif image)))
+(defmethod image-date ((image image))
+  (parse-exif-date (gethash "DateTimeDigitized" (image-exif image))))
+(defmethod image-height ((image image))
+  (gethash "ExifImageLength" (image-exif image)))
+(defmethod image-width ((image image))
+  (gethash "ExifImageWidth" (image-exif image)))
