@@ -67,10 +67,8 @@
 
   (unless (null-pointer-p pixels)
     (finalize self (lambda ()
-                     (print "freeing pixels")
                      (foreign-free pixels))))
   (finalize self (lambda () 
-                   (print "freeing wand")
                    (destroy-magick-wand wand)))
 
   (setf (slot-value self 'pixels) pixels)
@@ -80,7 +78,7 @@
     (filename &key (channels *default-channels*) (read-pixels nil))
   (check-magick-initialized)
   (let ((wand (new-magick-wand)))
-    (magick-read-image wand filename)
+    (magick-read-image wand (namestring filename))
     (let* ((exif (magick-get-exif wand))
            (width (magick-get-image-width wand))
            (height (magick-get-image-height wand))
@@ -100,7 +98,7 @@
 (defmethod write-image ((image image) &optional filename)
   (check-magick-initialized)
   (magick-write-image (image-wand image)
-                      (when filename filename)))
+                      (when filename (namestring filename))))
 
 (defparameter *exif-date-scanner*
   (create-scanner "(\\d+):(\\d+):(\\d+) (\\d+):(\\d+):(\\d+)"
@@ -119,3 +117,5 @@
   (gethash "ExifImageLength" (image-exif image)))
 (defmethod image-width ((image image))
   (gethash "ExifImageWidth" (image-exif image)))
+
+(magick-initialize)
