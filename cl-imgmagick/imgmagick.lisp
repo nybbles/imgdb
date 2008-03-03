@@ -112,10 +112,11 @@
 (defmethod image-orientation ((image image))
   (gethash "Orientation" (image-exif image)))
 (defmethod image-date ((image image))
-  (parse-exif-date (gethash "DateTimeDigitized" (image-exif image))))
+  (parse-exif-date (gethash "DateTime" (image-exif image))))
 (defmethod image-height ((image image))
   (gethash "ExifImageLength" (image-exif image)))
 (defmethod image-width ((image image))
   (gethash "ExifImageWidth" (image-exif image)))
 
-(magick-initialize)
+(unless *magick-initialized* 
+  (magick-initialize))
