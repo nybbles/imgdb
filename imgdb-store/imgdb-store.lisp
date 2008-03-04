@@ -39,6 +39,8 @@
     (unless (equal img-url img-store-url)
       (ensure-directories-exist
        (directory-namestring img-store-url))
+      ; Perhaps img-store-url should be checked to make sure that
+      ; another file is not already there.
       (copy-file img-url img-store-url))
     img-store-url))
 
@@ -54,7 +56,7 @@
   ;; How can the insertion of duplicate file entries be handled?
   (let*
       ((img (read-image img-url))
-       (img-date (image-date img))
+       (img-date (or (image-original-date img) (image-date img)))
        (img-year (when img-date (first img-date)))
        (img-month (when img-date (second img-date)))
        (img-day (when img-date (third img-date)))
