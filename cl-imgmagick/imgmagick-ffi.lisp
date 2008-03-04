@@ -44,8 +44,15 @@
 (defcfun ("MagickGetImageCompressionQuality"
           magick-get-image-compression-quality)
     :ulong (wand :pointer))
-(defcfun ("MagickIdentifyImage" magick-identify-image) :string (wand :pointer))
-    
+
+(defcfun ("MagickGetImageProperty" magick-get-image-property)
+    :string+ptr (wand :pointer) (property :string))
+(defcfun ("MagickGetImageProperties" magick-get-image-properties)
+    :string+ptr (wand :pointer) (pattern :string) (num-props :pointer))
+(defcfun ("MagickSetImageProperty" magick-set-image-property)
+    magickbool (wand :pointer) (property :string) (value :string))
+(defcfun ("MagickDeleteImageProperty" magick-delete-image-property)
+    magickbool (wand :pointer) (property :string))
 
 (defcfun ("MagickGetNumberImages" magick-get-number-images)
     :long (wand :pointer))

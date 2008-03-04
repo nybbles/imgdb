@@ -21,32 +21,21 @@
   (unless  *magick-initialized*
     (error "cl-imgmagick has not been initialized.")))
 
-(defun magick-get-exif (wand)
-  (let ((exif-data (magick-identify-image wand))
-        (exif-table (make-hash-table :test 'equal)))
-    (dolist (line (split #\Newline exif-data))
-      (register-groups-bind (field value) (*exif-scanner* line)
-        (setf (gethash (remove-whitespace field) exif-table)
-              (remove-whitespace value))))
-    exif-table))
-
 (defun remove-whitespace (string)
   (regex-replace "\\s+$" (regex-replace "^\\s+" string "") ""))
 
 (defgeneric read-image (filename &key channels read-pixels))
 (defgeneric write-image (image &optional filename))
 
+(defgeneric image-get-property (image property))
 (defgeneric image-orientation (image))
+(defgeneric image-original-date (image))
 (defgeneric image-date (image))
 (defgeneric image-height (image))
 (defgeneric image-width (image))
 
 (defclass image ()
-  ((exif :reader image-exif
-         :type hash-table
-         :initarg :exif
-         :initform (error "EXIF not provided."))
-   (filename :reader image-filename
+  ((filename :reader image-filename
              :type string
              :initarg :filename
              :initform (error "Filename not provided."))
@@ -79,8 +68,7 @@
   (check-magick-initialized)
   (let ((wand (new-magick-wand)))
     (magick-read-image wand (namestring filename))
-    (let* ((exif (magick-get-exif wand))
-           (width (magick-get-image-width wand))
+    (let* ((width (magick-get-image-width wand))
            (height (magick-get-image-height wand))
            (pixels
             (if read-pixels
@@ -91,7 +79,7 @@
         (magick-get-image-pixels wand 0 0 width height
                                  channels :char-pixel pixels))
       (make-instance 'image
-                     :exif exif :filename filename
+                     :filename filename
                      :pixels pixels :channels channels
                      :wand wand))))
 
@@ -109,14 +97,21 @@
       (*exif-date-scanner* date-str)
     (list year month day hour minute second)))
 
+(defmethod image-get-property ((image image) property)
+  (let ((result (magick-get-image-property (image-wand image) property)))
+    (foreign-free (second result))
+    (first result)))
+
 (defmethod image-orientation ((image image))
-  (gethash "Orientation" (image-exif image)))
+  (image-get-property image "Exif:Orientation"))
+(defmethod image-original-date ((image image))
+  (parse-exif-date (image-get-property image "Exif:DateTimeOriginal")))
 (defmethod image-date ((image image))
-  (parse-exif-date (gethash "DateTime" (image-exif image))))
+  (parse-exif-date (image-get-property image "Exif:DateTime")))
 (defmethod image-height ((image image))
-  (gethash "ExifImageLength" (image-exif image)))
+  (magick-get-image-height (image-wand image)))
 (defmethod image-width ((image image))
-  (gethash "ExifImageWidth" (image-exif image)))
+  (magick-get-image-width (image-wand image)))
 
 (unless *magick-initialized* 
   (magick-initialize))
