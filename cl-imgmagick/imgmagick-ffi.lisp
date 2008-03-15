@@ -2,6 +2,7 @@
 
 (define-foreign-library libWand
   (:darwin "libWand.dylib")
+  (:unix (:or "libWand.so" "libWand.so.9.0.0"))
   (t (:default "libWand")))
 (use-foreign-library libWand)
 
