@@ -12,10 +12,10 @@
     (walk-directory
      img-drop
      (lambda (x)
-       (incf num-imgs)
        (handler-bind
            ((sql-database-data-error #'skip-img-record-creation))
-         (create-img-record x img-store dbconn)))
+         (create-img-record x img-store dbconn)
+         (incf num-imgs)))
      :test
      (lambda (x)
        (and (file-exists-p x)
@@ -23,25 +23,51 @@
                      :test #'string-equal))))
     num-imgs))
 
-(defun get-img-url-in-img-store (img-url img-store year month day)
+(defun get-img-store-url (img-url year month day img-store)
   (merge-pathnames
-   (make-pathname :directory 
+   (make-pathname :name (pathname-name img-url)
+                  :type (pathname-type img-url))
+   (get-img-store-directory year month day img-store)))
+
+(defun get-img-store-directory (year month day img-store)
+  (merge-pathnames
+   (make-pathname :directory
                   (if (and year month day)
                       (list :relative year month day)
-                      (list :relative "undated"))
-                  :name (pathname-name img-url)
-                  :type (pathname-type img-url))
+                      (list :relative "undated")))
    img-store))
 
-(defun move-img-from-img-drop-to-img-store (img-url img-store year month day)
+(let ((url-version-scanner (create-scanner "(.+)-(\\d+)$")))
+  (defun get-next-available-img-store-url (img-store-url)
+    (if (is-img-store-url-occupied img-store-url)
+        (get-next-available-img-store-url
+         (let* ((name (pathname-name img-store-url))
+                (type (pathname-type img-store-url))
+                (next-name
+                 (register-groups-bind (name version)
+                     (url-version-scanner name)
+                   (unless (or (null name) (null version))
+                     (let ((next-version (+ 1 (parse-integer version))))
+                       (concatenate 'string name "-" (write-to-string next-version)))))))
+           (merge-pathnames
+            (make-pathname :name
+                           (if next-name
+                               next-name
+                               (concatenate 'string name "-" "1"))
+                           :type type)
+            img-store-url)))
+        img-store-url)))
+
+(defun is-img-store-url-occupied (img-store-url)
+  (probe-file img-store-url))
+
+(defun move-img-from-img-drop-to-img-store (img-url year month day img-store)
   (let ((img-store-url
-         (get-img-url-in-img-store img-url img-store year month day)))
-    (unless (equal img-url img-store-url)
-      (ensure-directories-exist
-       (directory-namestring img-store-url))
-      ; Perhaps img-store-url should be checked to make sure that
-      ; another file is not already there.
-      (copy-file img-url img-store-url))
+         (get-next-available-img-store-url
+          (get-img-store-url img-url year month day img-store))))
+    (ensure-directories-exist
+     (directory-namestring img-store-url))
+    (copy-file img-url img-store-url)
     img-store-url))
 
 (defun skip-img-record-creation (c)
@@ -54,32 +80,34 @@
 (defun create-img-record (img-url img-store dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
-  (let*
-      ((img (read-image img-url))
-       (img-date (or (image-original-date img) (image-date img)))
-       (img-year (when img-date (first img-date)))
-       (img-month (when img-date (second img-date)))
-       (img-day (when img-date (third img-date)))
-       (img-store-url
-        (move-img-from-img-drop-to-img-store img-url img-store
-                                             img-year img-month img-day))
-       (img-digest (byte-array-to-hex-string (digest-file :md5 img-store-url)))
-       (img-store-url
-        (concatenate 'string "file://" (namestring img-store-url)))
-       (img-store-url-digest
-        (byte-array-to-hex-string
-         (digest-sequence :md5 (ascii-string-to-byte-array img-store-url)))))
-    (restart-case
-        (insert-records :into *img-table-name*
-                        :attributes
-                        '([digest] [urldigest] [url] [year] [month] [day])
-                        :values 
-                        (list img-digest img-store-url-digest img-store-url
-                              img-year img-month img-day)
-                        :database dbconn)
-      (skip-img-record-creation ()
-        (delete-file (regex-replace "^file://" img-store-url ""))
-        nil))))
+  (let ((img-digest (byte-array-to-hex-string (digest-file :md5 img-url))))
+    (unless (img-record-exists img-digest)
+      (let*
+          ((img (read-image img-url))
+           (img-date (or (image-original-date img) (image-date img)))
+           (img-year (when img-date (first img-date)))
+           (img-month (when img-date (second img-date)))
+           (img-day (when img-date (third img-date)))
+           (img-store-url
+            (move-img-from-img-drop-to-img-store img-url
+                                                 img-year img-month img-day
+                                                 img-store))
+           (img-store-url-digest
+            (byte-array-to-hex-string
+             (digest-sequence :md5
+                              (ascii-string-to-byte-array (namestring img-store-url))))))
+        (restart-case
+            (insert-records :into *img-table-name*
+                            :attributes
+                            '([digest] [urldigest] [url] [year] [month] [day])
+                            :values 
+                            (list img-digest img-store-url-digest
+                                  (namestring img-store-url)
+                                  img-year img-month img-day)
+                            :database dbconn)
+          (skip-img-record-creation ()
+            (delete-file img-store-url)
+            nil))))))
 
 (defun remove-img-record (img-url dbconn)
   "Removes the record indexed by id from the database"
@@ -89,18 +117,17 @@
     (delete-records :from *img-table-name*
                     :where [= [urldigest] img-urldigest]
                     :database dbconn)
-    (delete-file (regex-replace "^file://" img-url ""))))
-
-(defmacro select-img-records (fields &rest constraints)
-  `(select ,@fields :from ,*img-table-name* ,@constraints))
-
-(defmacro do-img-record-select (vars fields constraints dbconn &body body)
-  `(do-query ,vars [select ,@fields :from [imgs] ,@constraints]
-             :database ,dbconn
-             ,@body))
+    (delete-file img-url)))
 
 (defun img-record-exists (img-digest)
-  (select-img-records '([digest]) :where [= [digest] img-digest]))
+  (> (caar (select [count [digest]] 
+                   :from *img-table-name*
+                   :where [= [digest] img-digest]))
+     0))
+
+(defun count-img-records ()
+  (caar (select [count [*]]
+                :from *img-table-name*)))
 
 (defun connect-to-dbserver (dbconn-spec db-type)
   "Connect to a database"
