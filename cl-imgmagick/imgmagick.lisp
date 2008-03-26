@@ -99,7 +99,7 @@
 
 (defmethod image-get-property ((image image) property)
   (let ((result (magick-get-image-property (image-wand image) property)))
-    (foreign-free (second result))
+    (magick-relinquish-memory (second result))
     (first result)))
 
 (defmethod image-orientation ((image image))

@@ -1,9 +1,9 @@
 (in-package :cl-imgmagick)
 
 (define-foreign-library libWand
-  (:darwin "libWand.dylib")
-  (:unix (:or "libWand.so" "libWand.so.9.0.0"))
-  (t (:default "libWand")))
+  (:darwin "libMagickWand.dylib")
+  (:unix (:or "libMagickWand.so"))
+  (t (:default "libMagickWand")))
 (use-foreign-library libWand)
 
 ;;; MagickWand and MagickWand Image ffi
@@ -73,6 +73,14 @@
     :string (wand :pointer) (severity :pointer))
 (defcfun ("MagickClearException" magick-clear-exception)
     magickbool (wand :pointer))
+
+(defcfun ("MagickRelinquishMemory" magick-relinquish-memory)
+    :pointer (resource :pointer))
+
+(defcfun ("MagickGetResourceLimit" magick-get-resource-limit)
+                  :ulong (type :int))
+(defcfun ("MagickSetResourceLimit" magick-set-resource-limit)
+                  magickbool (type :int) (limit :ulong))
 
 (defcenum :storage-type
   :undefined-pixel

@@ -1,5 +1,6 @@
 (in-package :imgdb-store)
 
+(disable-sql-reader-syntax)
 (enable-sql-reader-syntax)
 
 (defparameter *img-types* '("jpeg" "jpg"))
