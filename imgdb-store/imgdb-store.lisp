@@ -119,15 +119,17 @@
                     :database dbconn)
     (delete-file img-url)))
 
-(defun img-record-exists (img-digest)
+(defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]] 
                    :from *img-table-name*
-                   :where [= [digest] img-digest]))
+                   :where [= [digest] img-digest]
+                   :database dbconn))
      0))
 
-(defun count-img-records ()
+(defun count-img-records (dbconn)
   (caar (select [count [*]]
-                :from *img-table-name*)))
+                :from *img-table-name*
+                :database dbconn)))
 
 (defun connect-to-dbserver (dbconn-spec db-type)
   "Connect to a database"
