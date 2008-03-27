@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
 
-sbcl --load startup.lisp
+STARTUP_SCRIPT_DIR=${0%\/*}
+
+sbcl --eval "(defparameter *startup-script-dir* #P\"$STARTUP_SCRIPT_DIR/\")" \
+     --load ${0%\/*}/startup.lisp
