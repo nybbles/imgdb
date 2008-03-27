@@ -1,0 +1,1 @@
+../../cl-imgmagick/cl-imgmagick.asd
