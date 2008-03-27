@@ -82,33 +82,34 @@
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
   (let ((img-digest (byte-array-to-hex-string (digest-file :md5 img-url))))
-    (unless (img-record-exists img-digest)
-      (let*
-          ((img (read-image img-url))
-           (img-date (or (image-original-date img) (image-date img)))
-           (img-year (when img-date (first img-date)))
-           (img-month (when img-date (second img-date)))
-           (img-day (when img-date (third img-date)))
-           (img-store-url
-            (move-img-from-img-drop-to-img-store img-url
-                                                 img-year img-month img-day
-                                                 img-store))
-           (img-store-url-digest
-            (byte-array-to-hex-string
-             (digest-sequence :md5
-                              (ascii-string-to-byte-array (namestring img-store-url))))))
-        (restart-case
-            (insert-records :into *img-table-name*
-                            :attributes
-                            '([digest] [urldigest] [url] [year] [month] [day])
-                            :values 
-                            (list img-digest img-store-url-digest
-                                  (namestring img-store-url)
-                                  img-year img-month img-day)
-                            :database dbconn)
-          (skip-img-record-creation ()
-            (delete-file img-store-url)
-            nil))))))
+    (unless (img-record-exists img-digest dbconn)
+      (with-magick-wand wand
+        (magick-ping-image wand (namestring img-url))
+        (let* ((img-date (or (image-original-date wand) (image-date wand)))
+               (img-year (when img-date (first img-date)))
+               (img-month (when img-date (second img-date)))
+               (img-day (when img-date (third img-date)))
+               (img-store-url
+                (move-img-from-img-drop-to-img-store img-url
+                                                     img-year img-month img-day
+                                                     img-store))
+               (img-store-url-digest
+                (byte-array-to-hex-string
+                 (digest-sequence
+                  :md5
+                  (ascii-string-to-byte-array (namestring img-store-url))))))
+          (restart-case
+              (insert-records :into *img-table-name*
+                              :attributes
+                              '([digest] [urldigest] [url] [year] [month] [day])
+                              :values 
+                              (list img-digest img-store-url-digest
+                                    (namestring img-store-url)
+                                    img-year img-month img-day)
+                              :database dbconn)
+            (skip-img-record-creation ()
+              (delete-file img-store-url)
+              nil)))))))
 
 (defun remove-img-record (img-url dbconn)
   "Removes the record indexed by id from the database"

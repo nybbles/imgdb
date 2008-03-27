@@ -2,4 +2,4 @@
 
 (defpackage :cl-imgmagick
   (:use :cl :cffi :cl-ppcre :trivial-garbage)
-  (:export read-image image-date image-original-date))
+  (:export with-magick-wand magick-ping-image image-date image-original-date))

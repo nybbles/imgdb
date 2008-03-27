@@ -1,7 +1,7 @@
 (in-package :cl-imgmagick)
 
 (define-foreign-library libWand
-  (:darwin "libMagickWand.dylib")
+  (:darwin (:or "libMagickWand.so" "libWand.dylib"))
   (:unix (:or "libMagickWand.so"))
   (t (:default "libMagickWand")))
 (use-foreign-library libWand)
@@ -18,6 +18,17 @@
 (defcfun ("ClearMagickWand" clear-magick-wand) :void (wand :pointer))
 (defcfun ("DestroyMagickWand" destroy-magick-wand) :pointer (wand :pointer))
 (defcfun ("IsMagickWand" is-magick-wand) magickbool (wand :pointer))
+
+(defcfun ("MagickResetIterator" magick-reset-iterator)
+    :void (wand :pointer))
+(defcfun ("MagickGetIteratorIndex" magick-get-iterator-index)
+    :long (wand :pointer))
+(defcfun ("MagickSetFirstIterator" magick-set-first-iterator)
+    :void (wand :pointer))
+(defcfun ("MagickSetIteratorIndex" magick-set-iterator-index)
+    :void (wand :pointer) (index :long))
+(defcfun ("MagickSetLastIterator" magick-set-last-iterator)
+    :void (wand :pointer))
 
 (defcfun ("MagickReadImage" magick-read-image)
     magickbool (wand :pointer) (filename :string))
