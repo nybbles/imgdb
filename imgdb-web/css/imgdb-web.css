@@ -1,19 +1,28 @@
 body 
 {
-    background-color: white
+    background-color: white;
 }
 
-h1
+h1,h2,h3,h4,h5,h6
 {
-    font-size: 36pt
+    margin-top: 0px;
+    margin-left: 0px;
 }
 
-h2
+div#signin
 {
-    color: blue
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    
+    text-align: right;
 }
 
-p
+div#front-content
 {
-    margin-left: 50px
+    position: fixed;
+    top: 30px;
+    left: 30px;
+     
+    text-align: left;
 }
