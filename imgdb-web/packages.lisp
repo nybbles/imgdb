@@ -1,5 +1,5 @@
 (in-package #:cl-user)
 
 (defpackage :imgdb-web
-  (:use :cl :hunchentoot)
+  (:use :cl :hunchentoot :cl-who)
   (:export :nil))
