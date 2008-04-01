@@ -126,6 +126,13 @@
                     :database dbconn)
     (delete-file img-url)))
 
+(defmacro select-img-record (select-cols where-clause dbconn)
+  `(select ,@select-cols
+           :from ,*img-table-name*
+           ,@(unless (null where-clause)
+                    `(:where ,where-clause))
+           :database ,dbconn))
+
 (defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]] 
                    :from *img-table-name*
@@ -167,3 +174,5 @@
 
 ;;; Stubs
 '(defun repair-img-store (img-store dbconn))
+
+(disable-sql-reader-syntax)
