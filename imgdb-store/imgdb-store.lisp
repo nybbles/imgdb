@@ -98,7 +98,7 @@
                  (img-store-url-digest
                   (byte-array-to-hex-string
                    (digest-sequence
-                    :md5
+                    :sha1
                     (ascii-string-to-byte-array (namestring img-store-url))))))
             (restart-case
                 (progn
@@ -120,7 +120,7 @@
   "Removes the record indexed by id from the database"
   (let ((img-urldigest (byte-array-to-hex-string
                         (digest-sequence
-                         :md5 (ascii-string-to-byte-array img-url)))))
+                         :sha1 (ascii-string-to-byte-array img-url)))))
     (delete-records :from *img-table-name*
                     :where [= [urldigest] img-urldigest]
                     :database dbconn)
@@ -153,8 +153,8 @@
 
 (defun create-img-table (dbconn)
   (create-table *img-table-name*
-                '(([digest] (vector char 32) :not-null)
-                  ([urldigest] (vector char 32) :not-null :unique :primary-key)
+                '(([digest] (vector char 40) :not-null)
+                  ([urldigest] (vector char 40) :not-null :unique :primary-key)
                   ([url] string :not-null :unique)
                   ([year] integer)
                   ([month] integer)
