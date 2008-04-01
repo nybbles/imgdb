@@ -145,10 +145,10 @@
                 :from *img-table-name*
                 :database dbconn)))
 
-(defun connect-to-dbserver (dbconn-spec db-type)
-  "Connect to a database"
+(defun create-imgdb-dbconn (dbconn-spec db-type)
+  "Connect to an imgdb database"
   (connect dbconn-spec :database-type db-type))
-(defun disconnect-from-dbserver (dbconn)
+(defun destroy-imgdb-dbconn (dbconn)
   (disconnect :database dbconn))
 
 (defun create-img-database (dbconn db-type)
