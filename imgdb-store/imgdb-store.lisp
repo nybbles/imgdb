@@ -83,7 +83,7 @@
 (defun index-img (img-url img-store dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
-  (let ((img-digest (byte-array-to-hex-string (digest-file :md5 img-url))))
+  (let ((img-digest (byte-array-to-hex-string (digest-file :sha1 img-url))))
     (if (img-record-exists img-digest dbconn)
         nil
         (with-magick-wand wand
