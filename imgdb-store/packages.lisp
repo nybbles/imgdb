@@ -5,4 +5,7 @@
   (:export :create-imgdb-dbconn :destroy-imgdb-dbconn
            :img-table-exists :create-img-table
            :index-img-drop :select-img-record
-           :enable-sql-reader-syntax :disable-sql-reader-syntax))
+           :enable-sql-reader-syntax :disable-sql-reader-syntax
+           :locally-enable-sql-reader-syntax
+           :locally-disable-sql-reader-syntax
+           :restore-sql-reader-syntax-state))
