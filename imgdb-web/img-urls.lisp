@@ -49,7 +49,7 @@
   (list (floor (* width (/ new-height height))) new-height))
 
 (defun get-imgdb-store-url-from-img-id (img-id)
-  (caar (select-img-record ([url]) [= [digest] img-id] *imgdb-dbconn*)))
+  (caar (select-img-records ([url]) [= [digest] img-id] *imgdb-dbconn*)))
 
 (defun get-img-id-from-uri (uri)
   (register-groups-bind (img-id)

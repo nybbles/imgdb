@@ -61,6 +61,10 @@
   (parse-exif-date (image-get-property wand "Exif:DateTimeOriginal")))
 (defun image-date (wand)
   (parse-exif-date (image-get-property wand "Exif:DateTime")))
+(defun image-width (wand)
+  (magick-get-image-width wand))
+(defun image-height (wand)
+  (magick-get-image-height wand))
 
 (unless *magick-initialized* 
   (magick-initialize))

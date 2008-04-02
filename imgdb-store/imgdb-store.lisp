@@ -1,7 +1,6 @@
 (in-package :imgdb-store)
 
-(disable-sql-reader-syntax)
-(enable-sql-reader-syntax)
+(locally-enable-sql-reader-syntax)
 
 (defparameter *img-types* '("jpeg" "jpg"))
 (defparameter *default-dbconn-spec* '())
@@ -99,16 +98,20 @@
                   (byte-array-to-hex-string
                    (digest-sequence
                     :sha1
-                    (ascii-string-to-byte-array (namestring img-store-url))))))
+                    (ascii-string-to-byte-array (namestring img-store-url)))))
+                 (img-width (image-width wand))
+                 (img-height (image-height wand)))
             (restart-case
                 (progn
                   (insert-records :into *img-table-name*
                                   :attributes
                                   '([digest] [urldigest] [url]
+                                    [width] [height]
                                     [year] [month] [day])
                                   :values 
                                   (list img-digest img-store-url-digest
                                         (namestring img-store-url)
+                                        img-width img-height
                                         img-year img-month img-day)
                                   :database dbconn)
                   t)
@@ -126,11 +129,11 @@
                     :database dbconn)
     (delete-file img-url)))
 
-(defmacro select-img-record (select-cols where-clause dbconn)
+(defmacro select-img-records (select-cols where-clause dbconn)
   `(select ,@select-cols
            :from ,*img-table-name*
            ,@(unless (null where-clause)
-                    `(:where ,where-clause))
+                     `(:where ,where-clause))
            :database ,dbconn))
 
 (defun img-record-exists (img-digest dbconn)
@@ -163,6 +166,8 @@
                 '(([digest] (vector char 40) :not-null)
                   ([urldigest] (vector char 40) :not-null :unique :primary-key)
                   ([url] string :not-null :unique)
+                  ([width] integer :not-null)
+                  ([height] integer :not-null)
                   ([year] integer)
                   ([month] integer)
                   ([day] integer))
@@ -175,4 +180,4 @@
 ;;; Stubs
 '(defun repair-img-store (img-store dbconn))
 
-(disable-sql-reader-syntax)
+(restore-sql-reader-syntax-state)
