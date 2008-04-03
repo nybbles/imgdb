@@ -8,7 +8,7 @@
          (req-type (when req-params (read-from-string (caar req-params))))
          (req-arg (when req-params
                     (parse-integer (cdar req-params) :junk-allowed t))))
-    (cond 
+    (cond
         ((and (= (length req-params) 1)
               (not (null req-arg))
               (subsetp (list req-type)
@@ -31,12 +31,28 @@
       ((= (length req-params) 0)
        (let ((img-store-url
               (first (get-img-store-url-and-size-from-img-id img-id))))
-         (transfer-unresized-image img-store-url)))
+         (if (null img-store-url)
+             (not-found-page)
+             (transfer-unresized-image img-store-url))))
       (t (not-found-page)))))
 
 (defun transfer-unresized-image (img-store-url)
   ;; Just serve up the unaltered image
-  (format nil "still under construction"))
+  (with-open-file (img img-store-url
+                   :direction :input :element-type '(unsigned-byte 8)
+                   :if-does-not-exist :error)
+    (setf (content-type) "image/jpeg" ;; only valid for jpegs
+          (content-length) (file-length img)
+          (header-out "Last-Modified")
+          (rfc-1123-date (or (file-write-date img-store-url)
+                             (get-universal-time))))
+    (let ((out (send-headers)))
+      (loop with buf = (make-array 65536 :element-type '(unsigned-byte 8))
+            for pos = (read-sequence buf img)
+            until (zerop pos)
+            do (write-sequence buf out :end pos)
+               (finish-output out)))))
+
 (defun transfer-resized-image (img-store-url new-width new-height)
   ;; Read and resize the image.
   ;; Resize the image
