@@ -1,6 +1,7 @@
 (asdf:defsystem #:imgdb-web
   :version "0.0.1"
-  :depends-on (:hunchentoot :cl-who :cl-ppcre :cl-imgmagick :imgdb-store)
+  :depends-on (:hunchentoot :cl-who :cl-ppcre
+               :cl-imgmagick :imgdb-store :ffi-utils)
   :components ((:file "packages")
                (:file "imgdb-web-setup" :depends-on ("packages"))
                (:file "xhtml-gen-utils" :depends-on ("imgdb-web-setup"))

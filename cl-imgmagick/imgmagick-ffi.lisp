@@ -143,6 +143,13 @@
   (channels :string) (storage-type :storage-type)
   (pixels :pointer))
 
+(defcfun ("MagickAdaptiveResizeImage" magick-adaptive-resize-image)
+    magickbool
+  (wand :pointer) (width :ulong) (height :ulong))
+
+(defcfun ("MagickGetImageBlob" magick-get-image-blob)
+    :pointer (wand :pointer) (blob-length :pointer))
+
 ;;; PixelWand ffi
 
 (defcfun ("NewPixelWand" new-pixel-wand) :pointer)

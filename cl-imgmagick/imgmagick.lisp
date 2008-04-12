@@ -24,10 +24,11 @@
 (defun remove-whitespace (string)
   (regex-replace "\\s+$" (regex-replace "^\\s+" string "") ""))
 
-(defmacro with-magick-wand (wand &body body)
+(defmacro with-magick-wand ((wand) &body body)
   `(let ((,wand (new-magick-wand)))
-     ,@body
-     (destroy-magick-wand ,wand)))
+     (unwind-protect
+          (progn . ,body)
+       (destroy-magick-wand ,wand))))
 
 (defmacro with-image-pixels
     ((wand pixels &optional (channels *default-channels*)) &body body)
@@ -40,6 +41,15 @@
        (magick-get-image-pixels ,wand 0 0 ,image-width-name ,image-height-name
                                 ,channels :char-pixel ,pixels)
        ,@body))))
+
+(defmacro with-image-blob ((wand blob blob-size) &body body)
+  (let ((blob-size-ptr-name (gensym "BLOBSIZEPTR")))
+    `(with-foreign-object (,blob-size-ptr-name :uint32)
+       (let* ((,blob (magick-get-image-blob ,wand ,blob-size-ptr-name))
+              (,blob-size (mem-aref ,blob-size-ptr-name :uint32)))
+         (unwind-protect
+              (progn . ,body)
+           (magick-relinquish-memory ,blob))))))
 
 (defparameter *exif-date-scanner*
   (create-scanner "(\\d+):(\\d+):(\\d+) (\\d+):(\\d+):(\\d+)"

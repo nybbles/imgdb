@@ -9,25 +9,28 @@
          (req-arg (when req-params
                     (parse-integer (cdar req-params) :junk-allowed t))))
     (cond
-        ((and (= (length req-params) 1)
-              (not (null req-arg))
-              (subsetp (list req-type)
-                       '(resize width height)))
-         (let ((img-store-url-and-size
-                (get-img-store-url-and-size-from-img-id img-id)))
-           (if (null img-store-url-and-size)
-               (not-found-page)
-               (let* ((img-store-url (first img-store-url-and-size))
-                      (img-width (second img-store-url-and-size))
-                      (img-height (third img-store-url-and-size))
-                      (resized-dimensions
-                       (resize-required? img-width img-height
-                                         req-type req-arg)))
-                 (if (not resized-dimensions)
-                     (transfer-unresized-image img-store-url)
-                     (transfer-resized-image img-store-url
-                                             (first resized-dimensions)
-                                             (second resized-dimensions)))))))
+      ((and (= (length req-params) 1)
+            (not (null req-arg))
+            (subsetp (list req-type)
+                     '(resize width height)))
+       (let ((img-store-url-and-size
+              (get-img-store-url-and-size-from-img-id img-id)))
+         (if (null img-store-url-and-size)
+             (not-found-page)
+             (let* ((img-store-url (first img-store-url-and-size))
+                    (img-width (second img-store-url-and-size))
+                    (img-height (third img-store-url-and-size)))
+               (if (resize-valid? img-width img-height req-type req-arg)
+                   (let ((resized-dimensions
+                          (resize-required? img-width img-height
+                                            req-type req-arg)))
+                     (if (not resized-dimensions)
+                         (transfer-unresized-image img-store-url)
+                         (transfer-resized-image
+                          img-store-url
+                          (first resized-dimensions)
+                          (second resized-dimensions))))
+                   (not-found-page))))))
       ((= (length req-params) 0)
        (let ((img-store-url
               (first (get-img-store-url-and-size-from-img-id img-id))))
@@ -61,8 +64,20 @@
   ;; of doing the reading, resizing and sending of the
   ;; image using buffers (instead of loading the entire
   ;; image into memory).
-  (format nil "still under construction"))
-
+  (setf (content-type) "image/jpeg" ;; only valid for jpegs
+        (header-out "Last-Modified")
+        (rfc-1123-date (get-universal-time)))
+  (with-magick-wand (wand)
+    (magick-read-image wand img-store-url)
+    (magick-adaptive-resize-image wand new-width new-height)
+    (with-image-blob (wand img-blob img-blob-size)
+      (setf (content-length) img-blob-size)
+      (let ((out (send-headers)))
+        (iterate-over-foreign-buffer
+            (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
+          (write-sequence vec out :end vec-pos)
+          (finish-output out))))))
+        
 (defun resize-required? (width height req-type req-arg)
   (ccase req-type
     (resize
@@ -74,6 +89,13 @@
     (height
      (and (not (= req-arg height))
           (resize-dimensions-to-height width height req-arg)))))
+
+(defun resize-valid? (width height req-type req-arg)
+  (<= req-arg
+     (ccase req-type
+       (resize 100)
+       (width width)
+       (height height))))
 
 (defun resize-dimensions-by-percentage (width height percent)
   (mapcar #'(lambda (x)

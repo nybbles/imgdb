@@ -85,7 +85,7 @@
   (let ((img-digest (byte-array-to-hex-string (digest-file :sha1 img-url))))
     (if (img-record-exists img-digest dbconn)
         nil
-        (with-magick-wand wand
+        (with-magick-wand (wand)
           (magick-ping-image wand (namestring img-url))
           (let* ((img-date (or (image-original-date wand) (image-date wand)))
                  (img-year (when img-date (first img-date)))
