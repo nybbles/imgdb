@@ -8,4 +8,5 @@
            :enable-sql-reader-syntax :disable-sql-reader-syntax
            :locally-enable-sql-reader-syntax
            :locally-disable-sql-reader-syntax
-           :restore-sql-reader-syntax-state))
+           :restore-sql-reader-syntax-state
+           :sql-operation))

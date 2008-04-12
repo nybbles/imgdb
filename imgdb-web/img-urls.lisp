@@ -110,7 +110,8 @@
 
 (defun get-img-store-url-and-size-from-img-id (img-id)
   (car (select-img-records ([url] [width] [height])
-                           [= [digest] img-id] *imgdb-dbconn*)))
+                           :where [= [digest] img-id]
+                           :database *imgdb-dbconn*)))
 
 (defun get-img-id-from-uri (uri)
   (register-groups-bind (img-id)

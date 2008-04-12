@@ -129,12 +129,12 @@
                     :database dbconn)
     (delete-file img-url)))
 
-(defmacro select-img-records (select-cols where-clause dbconn)
-  `(select ,@select-cols
+(defmacro select-img-records (select-columns &rest args)
+  (when (position :from args)
+    (error "Invalid keyword argument"))
+  `(select ,@select-columns
            :from ,*img-table-name*
-           ,@(unless (null where-clause)
-                     `(:where ,where-clause))
-           :database ,dbconn))
+           ,@args))
 
 (defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]] 
