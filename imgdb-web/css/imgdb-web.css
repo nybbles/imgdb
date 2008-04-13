@@ -43,41 +43,27 @@ div#date-cloud span
     padding: 4px;
 }
 
-div#date-cloud span.M-3
-{
-    font-size: 85%;
-    font-weight: lighter;
-}
-
 div#date-cloud span.M-2
 {
-    font-size: 85%;
+    font-size: 75%;
 }
 
 div#date-cloud span.M-1
 {
     font-size: 100%;
-    font-weight: lighter;
 }
 
 div#date-cloud span.M0
 {
-    font-size: 100%;
+    font-size: 125%;
 }
 
 div#date-cloud span.M1
 {
-    font-size: 120%;
-    font-weight: lighter;
+    font-size: 150%;
 }
 
 div#date-cloud span.M2
 {
-    font-size: 120%;
-}
-
-div#date-cloud span.M3
-{
-    font-size: 150%;
-    font-weight: lighter;
+    font-size: 175%;
 }
