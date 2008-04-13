@@ -11,7 +11,7 @@ h1,h2,h3,h4,h5,h6
 
 div#signin
 {
-    position: fixed;
+    float: right;
     top: 30px;
     right: 30px;
     
@@ -20,9 +20,64 @@ div#signin
 
 div#front-content
 {
-    position: fixed;
+    float: left;
     top: 30px;
     left: 30px;
      
     text-align: left;
+}
+
+div#date-cloud
+{
+    float: right;
+    top: 80px;
+    right: 30px;
+    
+    width: 500px;
+    text-align: center;
+    background:#FFFFCC;
+}
+
+div#date-cloud span
+{
+    padding: 4px;
+}
+
+div#date-cloud span.M-3
+{
+    font-size: 85%;
+    font-weight: lighter;
+}
+
+div#date-cloud span.M-2
+{
+    font-size: 85%;
+}
+
+div#date-cloud span.M-1
+{
+    font-size: 100%;
+    font-weight: lighter;
+}
+
+div#date-cloud span.M0
+{
+    font-size: 100%;
+}
+
+div#date-cloud span.M1
+{
+    font-size: 120%;
+    font-weight: lighter;
+}
+
+div#date-cloud span.M2
+{
+    font-size: 120%;
+}
+
+div#date-cloud span.M3
+{
+    font-size: 150%;
+    font-weight: lighter;
 }
