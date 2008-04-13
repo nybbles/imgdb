@@ -2,8 +2,26 @@
 
 (locally-enable-sql-reader-syntax)
 
+(define-condition invalid-img-url-request ()
+  ((img-url :initform (script-name)
+            :reader img-url
+            :type '(simple-array character))))
+
 (defun img-url-handler ()
-  (let* ((img-id (get-img-id-from-uri (script-name)))
+  (handler-case
+      (let ((resize-parameters
+             (calculate-resize-parameters-from-request "/img-urls")))
+        (ecase (length resize-parameters)
+          (3 (let ((img-store-url (first resize-parameters))
+                   (width (second resize-parameters))
+                   (height (third resize-parameters)))
+               (transfer-resized-image img-store-url width height)))
+          (1 (let ((img-store-url (first resize-parameters)))
+               (transfer-unresized-image img-store-url)))))
+    (invalid-img-url-request () (not-found-page))))
+
+(defun calculate-resize-parameters-from-request (prefix)
+  (let* ((img-id (get-img-id-from-uri (script-name) prefix))
          (req-params (get-parameters))
          (req-type (when req-params (read-from-string (caar req-params))))
          (req-arg (when req-params
@@ -16,7 +34,7 @@
        (let ((img-store-url-and-size
               (get-img-store-url-and-size-from-img-id img-id)))
          (if (null img-store-url-and-size)
-             (not-found-page)
+             (signal 'invalid-img-url-request)
              (let* ((img-store-url (first img-store-url-and-size))
                     (img-width (second img-store-url-and-size))
                     (img-height (third img-store-url-and-size)))
@@ -25,19 +43,18 @@
                           (resize-required? img-width img-height
                                             req-type req-arg)))
                      (if (not resized-dimensions)
-                         (transfer-unresized-image img-store-url)
-                         (transfer-resized-image
-                          img-store-url
-                          (first resized-dimensions)
-                          (second resized-dimensions))))
-                   (not-found-page))))))
+                         (list img-store-url)
+                         (list img-store-url
+                               (first resized-dimensions)
+                               (second resized-dimensions))))
+                   (signal 'invalid-img-url-request))))))
       ((= (length req-params) 0)
        (let ((img-store-url
               (first (get-img-store-url-and-size-from-img-id img-id))))
          (if (null img-store-url)
-             (not-found-page)
-             (transfer-unresized-image img-store-url))))
-      (t (not-found-page)))))
+             (signal 'invalid-img-url-request)
+             (list img-store-url))))
+      (t (signal 'invalid-img-url-request)))))
 
 (defun transfer-unresized-image (img-store-url)
   ;; Just serve up the unaltered image
@@ -57,13 +74,6 @@
                (finish-output out)))))
 
 (defun transfer-resized-image (img-store-url new-width new-height)
-  ;; Read and resize the image.
-  ;; Resize the image
-  ;; Send the resized image back.
-  ;; It doesn't look like there is any way in MagickWand
-  ;; of doing the reading, resizing and sending of the
-  ;; image using buffers (instead of loading the entire
-  ;; image into memory).
   (setf (content-type) "image/jpeg" ;; only valid for jpegs
         (header-out "Last-Modified")
         (rfc-1123-date (get-universal-time)))
@@ -113,12 +123,12 @@
                            :where [= [digest] img-id]
                            :database *imgdb-dbconn*)))
 
-(defun get-img-id-from-uri (uri)
+(defun get-img-id-from-uri (uri prefix)
   (register-groups-bind (img-id)
-      ("/img-urls/([0-9a-z]*)(\\?|$)" uri)
+      ((concatenate 'string prefix "/([0-9a-z]*)(\\?|$)") uri)
     img-id))
 
-(push (create-regex-dispatcher "/img-urls/.*" 'img-url-handler)
+(push (create-prefix-dispatcher "/img-urls/" 'img-url-handler)
       *dispatch-table*)
 
 (restore-sql-reader-syntax-state)
