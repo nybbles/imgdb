@@ -147,6 +147,10 @@
     magickbool
   (wand :pointer) (width :ulong) (height :ulong))
 
+(defcfun ("MagickCropImage" magick-crop-image)
+    magickbool
+  (wand :pointer) (width :ulong) (height :ulong) (x :long) (y :long))
+
 (defcfun ("MagickGetImageBlob" magick-get-image-blob)
     :pointer (wand :pointer) (blob-length :pointer))
 

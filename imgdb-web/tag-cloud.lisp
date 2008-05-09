@@ -29,7 +29,9 @@
     (round (average expts))))
 
 (defun average (numbers)
-  (/ (reduce #'+ numbers) (length numbers)))
+  (if (null numbers)
+      0
+      (/ (reduce #'+ numbers) (length numbers))))
 
 (defun get-covering-base (numbers &optional (coverage 5))
   (assert (oddp coverage))

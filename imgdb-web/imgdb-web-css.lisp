@@ -6,5 +6,3 @@
       (handle-static-file
        (merge-pathnames "css/imgdb-web.css" *imgdb-web-root*))))
 
-(push (create-prefix-dispatcher "/css/imgdb-web.css" 'imgdb-web-css)
-      *dispatch-table*)

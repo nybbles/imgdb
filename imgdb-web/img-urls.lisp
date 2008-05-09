@@ -10,7 +10,8 @@
 (defun img-url-handler ()
   (handler-case
       (let ((resize-parameters
-             (calculate-resize-parameters-from-request "/img-urls")))
+             (calculate-resize-parameters-from-request
+              "/img-urls" *imgdb-dbconn*)))
         (ecase (length resize-parameters)
           (3 (let ((img-store-url (first resize-parameters))
                    (width (second resize-parameters))
@@ -20,8 +21,15 @@
                (transfer-unresized-image img-store-url)))))
     (invalid-img-url-request () (not-found-page))))
 
-(defun calculate-resize-parameters-from-request (prefix)
-  (let* ((img-id (get-img-id-from-uri (script-name) prefix))
+(defun img-thumbnail-handler ()
+  (handler-case
+      (let ((resize-parameters
+             (calculate-resize-parameters-from-request
+              "/img-urls/thumbnails" *imgdb-dbconn*)))
+        (apply #'transfer-image-thumbnail resize-parameters))))
+
+(defun calculate-resize-parameters-from-request (prefix database)
+  (let* ((img-id (get-img-id-from-url (script-name) prefix))
          (req-params (get-parameters))
          (req-type (when req-params (read-from-string (caar req-params))))
          (req-arg (when req-params
@@ -32,7 +40,7 @@
             (subsetp (list req-type)
                      '(resize width height)))
        (let ((img-store-url-and-size
-              (get-img-store-url-and-size-from-img-id img-id)))
+              (get-img-store-url-and-size-from-img-id img-id database)))
          (if (null img-store-url-and-size)
              (signal 'invalid-img-url-request)
              (let* ((img-store-url (first img-store-url-and-size))
@@ -50,7 +58,7 @@
                    (signal 'invalid-img-url-request))))))
       ((= (length req-params) 0)
        (let ((img-store-url
-              (first (get-img-store-url-and-size-from-img-id img-id))))
+              (first (get-img-store-url-and-size-from-img-id img-id database))))
          (if (null img-store-url)
              (signal 'invalid-img-url-request)
              (list img-store-url))))
@@ -87,7 +95,36 @@
             (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
           (write-sequence vec out :end vec-pos)
           (finish-output out))))))
-        
+
+(defvar *default-thumbnail-size* 100)
+
+(defun transfer-image-thumbnail (img-store-url &optional new-width new-height)
+  (assert
+   (or (and (null new-width) (null new-height))
+       (and (not (null new-width)) (not (null new-height)))))
+  (setf (content-type) "image/jpeg" ;; only valid for jpegs
+        (header-out "Last-Modified")
+        (rfc-1123-date (get-universal-time)))
+  (with-magick-wand (wand)
+    (magick-read-image wand img-store-url)
+    (let* ((width (image-width wand))
+           (height (image-height wand))
+           (size (min width height))
+           (x (floor (/ (- width size) 2)))
+           (y (floor (/ (- height size) 2)))
+           (new-size (if (and (null new-width) (null new-height))
+                         *default-thumbnail-size*
+                         (min new-width new-height))))
+      (magick-crop-image wand size size  x y)
+      (magick-adaptive-resize-image wand new-size new-size)
+      (with-image-blob (wand img-blob img-blob-size)
+        (setf (content-length) img-blob-size)
+        (let ((out (send-headers)))
+          (iterate-over-foreign-buffer
+              (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
+            (write-sequence vec out :end vec-pos)
+            (finish-output out)))))))
+
 (defun resize-required? (width height req-type req-arg)
   (ccase req-type
     (resize
@@ -118,17 +155,14 @@
 (defun resize-dimensions-to-height (width height new-height)
   (list (floor (* width (/ new-height height))) new-height))
 
-(defun get-img-store-url-and-size-from-img-id (img-id)
+(defun get-img-store-url-and-size-from-img-id (img-id database)
   (car (select-img-records ([url] [width] [height])
                            :where [= [digest] img-id]
-                           :database *imgdb-dbconn*)))
+                           :database database)))
 
-(defun get-img-id-from-uri (uri prefix)
+(defun get-img-id-from-url (url prefix)
   (register-groups-bind (img-id)
-      ((concatenate 'string prefix "/([0-9a-z]*)(\\?|$)") uri)
+      ((concatenate 'string prefix "/([0-9a-z]*)(\\?|$)") url)
     img-id))
-
-(push (create-prefix-dispatcher "/img-urls/" 'img-url-handler)
-      *dispatch-table*)
 
 (restore-sql-reader-syntax-state)

@@ -11,4 +11,8 @@
    (:file "not-found-page" :depends-on ("xhtml-gen-utils"))
    (:file "welcome-page" :depends-on ("xhtml-gen-utils" "tag-cloud"))
    (:file "tag-cloud" :depends-on ("packages"))
-   (:file "imgdb-web-server" :depends-on ("imgdb-web-setup"))))
+   (:file "img-thumbnail-grid" :depends-on ("packages"))
+   (:file "imgdb-web-server" :depends-on ("imgdb-web-setup"))
+   (:file "dispatchers-setup"
+          :depends-on
+          ("imgdb-web-css" "not-found-page" "img-urls" "welcome-page"))))

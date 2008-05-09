@@ -163,8 +163,8 @@
 
 (defun create-img-table (dbconn)
   (create-table *img-table-name*
-                '(([digest] (vector char 40) :not-null)
-                  ([urldigest] (vector char 40) :not-null :unique :primary-key)
+                '(([digest] (vector char 40) :not-null :unique :primary-key)
+                  ([urldigest] (vector char 40) :not-null)
                   ([url] string :not-null :unique)
                   ([width] integer :not-null)
                   ([height] integer :not-null)

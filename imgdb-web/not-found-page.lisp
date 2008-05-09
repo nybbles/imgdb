@@ -7,5 +7,3 @@
      (:body (:h2 "Looks like you're lost..")
             "Maybe you could go "
             (:a :href "/" "here") "?"))))
-
-(push (create-regex-dispatcher "/.*" 'not-found-page) *dispatch-table*)
