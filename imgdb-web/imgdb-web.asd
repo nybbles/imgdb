@@ -13,6 +13,7 @@
    (:file "tag-cloud" :depends-on ("packages"))
    (:file "img-thumbnail-grid" :depends-on ("packages"))
    (:file "imgdb-web-server" :depends-on ("imgdb-web-setup"))
+   (:file "img-query" :depends-on ("imgdb-web-setup"))
    (:file "dispatchers-setup"
           :depends-on
           ("imgdb-web-css" "not-found-page" "img-urls" "welcome-page"))))

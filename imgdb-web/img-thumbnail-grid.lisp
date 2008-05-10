@@ -68,7 +68,7 @@
         (value (second constraint)))
     (concatenate
      'string
-     (write-to-string name) "="
+     (string-downcase (write-to-string name)) "="
      (cond ((or (integerp value) (stringp value)) (write-to-string value))
            (t (signal "invalid type for constraint value"))))))
 
@@ -97,15 +97,21 @@
 (defun translate-constraints-to-sql (constraints &optional result)
   (cond
     ((and (null constraints) (null result)) nil)
-    ((null constraints) (apply #'sql-operation 'and result))
+    ((null constraints)
+     (if (> (length result) 1)
+         (apply #'sql-operation 'and result)
+         (car result)))
     (t 
      (let* ((constraint (first constraints))
             (name (first constraint))
             (value (second constraint)))
        (translate-constraints-to-sql
         (rest constraints)
-        (cons (sql-operation '= (sql-expression :attribute name) value)
-              result))))))
+        (cons
+         (if (and (equal name "year") (equal value "undated"))
+             (sql-operation 'is (sql-expression :attribute name) 'null)
+             (sql-operation '= (sql-expression :attribute name) value))
+         result))))))
 
 (defun collect-query-resultset-link-intervals (current range img-set-size)
   (loop for i from 1

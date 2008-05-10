@@ -13,3 +13,5 @@
       *dispatch-table*)
 (push (create-regex-dispatcher "/img-urls/[a-f0-9]+$" 'img-url-handler)
       *dispatch-table*)
+
+(push (create-prefix-dispatcher "/img-query" 'img-query-page) *dispatch-table*)

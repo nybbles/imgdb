@@ -40,11 +40,12 @@
    query-results))
 
 (defun get-date-cloud-tag-link (tag-name)
-  (concatenate 'string "img-query" "?year=" tag-name))
+  (concatenate 'string "img-query" "?current=1&year=" tag-name))
 
 (defun select-num-imgs-by-year (database)
   (select-img-records ([year] [count [*]])
                       :group-by [year]
+                      :order-by '(([year] :desc))
                       :database database))
 
 (defun select-random-img-id (database)
