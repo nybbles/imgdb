@@ -74,7 +74,7 @@
           (header-out "Last-Modified")
           (rfc-1123-date (or (file-write-date img-store-url)
                              (get-universal-time))))
-    (let ((out (send-headers)))
+    (let ((out (flexi-stream-stream (send-headers))))
       (loop with buf = (make-array 65536 :element-type '(unsigned-byte 8))
             for pos = (read-sequence buf img)
             until (zerop pos)
@@ -90,7 +90,7 @@
     (magick-adaptive-resize-image wand new-width new-height)
     (with-image-blob (wand img-blob img-blob-size)
       (setf (content-length) img-blob-size)
-      (let ((out (send-headers)))
+      (let ((out (flexi-stream-stream (send-headers))))
         (iterate-over-foreign-buffer
             (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
           (write-sequence vec out :end vec-pos)
@@ -119,7 +119,7 @@
       (magick-adaptive-resize-image wand new-size new-size)
       (with-image-blob (wand img-blob img-blob-size)
         (setf (content-length) img-blob-size)
-        (let ((out (send-headers)))
+        (let ((out (flexi-stream-stream (send-headers))))
           (iterate-over-foreign-buffer
               (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
             (write-sequence vec out :end vec-pos)

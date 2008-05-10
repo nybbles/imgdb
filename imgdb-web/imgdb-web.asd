@@ -1,6 +1,6 @@
 (asdf:defsystem #:imgdb-web
   :version "0.0.1"
-  :depends-on (:hunchentoot :cl-who :cl-ppcre
+  :depends-on (:hunchentoot :flexi-streams :cl-who :cl-ppcre
                :cl-imgmagick :imgdb-store :ffi-utils)
   :components
   ((:file "packages")
