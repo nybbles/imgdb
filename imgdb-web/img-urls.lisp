@@ -122,7 +122,7 @@
                          *default-thumbnail-size*
                          (min new-width new-height))))
       (magick-crop-image wand size size  x y)
-      (magick-adaptive-resize-image wand new-size new-size)
+      (magick-thumbnail-image wand new-size new-size)
       (with-image-blob (wand img-blob img-blob-size)
         (setf (content-length) img-blob-size)
         (let ((out (flexi-stream-stream (send-headers))))

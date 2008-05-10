@@ -151,6 +151,10 @@
     magickbool
   (wand :pointer) (width :ulong) (height :ulong) (x :long) (y :long))
 
+(defcfun ("MagickThumbnailImage" magick-thumbnail-image)
+    magickbool
+  (wand :pointer) (width :ulong) (height :ulong))
+
 (defcfun ("MagickGetImageBlob" magick-get-image-blob)
     :pointer (wand :pointer) (blob-length :pointer))
 
