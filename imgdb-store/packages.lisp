@@ -9,4 +9,5 @@
            :locally-enable-sql-reader-syntax
            :locally-disable-sql-reader-syntax
            :restore-sql-reader-syntax-state
-           :sql-operation :sql-expression))
+           :sql-operation :sql-expression
+           :with-database))

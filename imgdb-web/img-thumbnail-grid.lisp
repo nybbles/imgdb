@@ -32,10 +32,11 @@
               (:img :src
                     (format nil "img-urls/thumbnails/~A" img-id))))))))
 
-(defun create-links-for-query-resultset (constraints current img-set-size)
+(defun create-links-for-query-resultset
+    (constraints current img-set-size dbconn)
   (let* ((range (get-range-for-constraints
                  (translate-constraints-to-sql constraints)
-                 *imgdb-dbconn*))
+                 dbconn))
          (intervals-list
           (collect-query-resultset-link-intervals current range img-set-size)))
     (with-html-output-to-string (output nil)

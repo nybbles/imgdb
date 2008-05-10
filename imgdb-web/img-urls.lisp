@@ -9,26 +9,32 @@
 
 (defun img-url-handler ()
   (handler-case
-      (let ((resize-parameters
-             (calculate-resize-parameters-from-request
-              "/img-urls" *imgdb-dbconn*)))
-        (ecase (length resize-parameters)
-          (3 (let ((img-store-url (first resize-parameters))
-                   (width (second resize-parameters))
-                   (height (third resize-parameters)))
-               (transfer-resized-image img-store-url width height)))
-          (1 (let ((img-store-url (first resize-parameters)))
-               (transfer-unresized-image img-store-url)))))
+      (with-database (dbconn *imgdb-store-db-conn-spec*
+                             :database-type *imgdb-store-db-conn-spec*
+                             :pool t)
+        (let ((resize-parameters
+               (calculate-resize-parameters-from-request
+                "/img-urls" dbconn)))
+          (ecase (length resize-parameters)
+            (3 (let ((img-store-url (first resize-parameters))
+                     (width (second resize-parameters))
+                     (height (third resize-parameters)))
+                 (transfer-resized-image img-store-url width height)))
+            (1 (let ((img-store-url (first resize-parameters)))
+                 (transfer-unresized-image img-store-url))))))
     (invalid-img-url-request () (not-found-page))))
 
 (defun img-thumbnail-handler ()
   (handler-case
-      (let ((resize-parameters
-             (calculate-resize-parameters-from-request
-              "/img-urls/thumbnails" *imgdb-dbconn*)))
-        (apply #'transfer-image-thumbnail resize-parameters))))
+      (with-database (dbconn *imgdb-store-db-conn-spec*
+                             :database-type *imgdb-store-db-type*
+                             :pool t)
+        (let ((resize-parameters
+               (calculate-resize-parameters-from-request
+                "/img-urls/thumbnails" dbconn)))
+          (apply #'transfer-image-thumbnail resize-parameters)))))
 
-(defun calculate-resize-parameters-from-request (prefix database)
+(defun calculate-resize-parameters-from-request (prefix dbconn)
   (let* ((img-id (get-img-id-from-url (script-name) prefix))
          (req-params (get-parameters))
          (req-type (when req-params (read-from-string (caar req-params))))
@@ -40,7 +46,7 @@
             (subsetp (list req-type)
                      '(resize width height)))
        (let ((img-store-url-and-size
-              (get-img-store-url-and-size-from-img-id img-id database)))
+              (get-img-store-url-and-size-from-img-id img-id dbconn)))
          (if (null img-store-url-and-size)
              (signal 'invalid-img-url-request)
              (let* ((img-store-url (first img-store-url-and-size))
@@ -58,7 +64,7 @@
                    (signal 'invalid-img-url-request))))))
       ((= (length req-params) 0)
        (let ((img-store-url
-              (first (get-img-store-url-and-size-from-img-id img-id database))))
+              (first (get-img-store-url-and-size-from-img-id img-id dbconn))))
          (if (null img-store-url)
              (signal 'invalid-img-url-request)
              (list img-store-url))))
@@ -155,10 +161,10 @@
 (defun resize-dimensions-to-height (width height new-height)
   (list (floor (* width (/ new-height height))) new-height))
 
-(defun get-img-store-url-and-size-from-img-id (img-id database)
+(defun get-img-store-url-and-size-from-img-id (img-id dbconn)
   (car (select-img-records ([url] [width] [height])
                            :where [= [digest] img-id]
-                           :database database)))
+                           :database dbconn)))
 
 (defun get-img-id-from-url (url prefix)
   (register-groups-bind (img-id)

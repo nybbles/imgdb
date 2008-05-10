@@ -6,21 +6,22 @@
 (defparameter *default-dbconn-spec* '())
 (defparameter *img-table-name* '[imgs])
 
-(defun index-img-drop (img-drop img-store dbconn)
+(defun index-img-drop (img-drop img-store db-conn-spec db-type)
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
   (let ((num-imgs 0))
-    (walk-directory
-     img-drop
-     (lambda (x)
-       (handler-bind
-           ((sql-database-data-error #'skip-img-record-creation))
-         (when (index-img x img-store dbconn)
-           (incf num-imgs))))
-     :test
-     (lambda (x)
-       (and (file-exists-p x)
-            (subsetp (list (pathname-type x)) *img-types*
-                     :test #'string-equal))))
+    (with-database (dbconn db-conn-spec :database-type db-type :pool t)
+      (walk-directory
+       img-drop
+       (lambda (x)
+         (handler-bind
+             ((sql-database-data-error #'skip-img-record-creation))
+           (when (index-img x img-store dbconn)
+             (incf num-imgs))))
+       :test
+       (lambda (x)
+         (and (file-exists-p x)
+              (subsetp (list (pathname-type x)) *img-types*
+                       :test #'string-equal)))))
     num-imgs))
 
 (defun get-img-store-url (img-url year month day img-store)
@@ -131,6 +132,8 @@
 (defmacro select-img-records (select-columns &rest args)
   (when (position :from args)
     (error "Invalid keyword argument"))
+  (unless (position :database args)
+    (error "Missing database connection argument"))
   `(select ,@select-columns
            :from ,*img-table-name*
            ,@args))
