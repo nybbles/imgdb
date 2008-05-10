@@ -2,7 +2,7 @@
 
 (define-foreign-library libWand
   (:darwin (:or "libMagickWand.so" "libWand.dylib"))
-  (:unix (:or "libMagickWand.so"))
+  (:unix (:or "libMagickWand.so" "libWand.so"))
   (t (:default "libMagickWand")))
 (use-foreign-library libWand)
 
