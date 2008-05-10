@@ -76,3 +76,15 @@ span.query-resultset-links a
     text-decoration: none;
     font-size: 12px;
 }
+
+a.thumbnail img
+{
+    display: inline;
+    margin: 0px;
+    border: solid 1px #ffffff;
+}
+
+a.thumbnail:hover img
+{
+    border: solid 1px #0000ff;
+}

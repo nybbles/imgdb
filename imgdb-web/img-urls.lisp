@@ -10,7 +10,7 @@
 (defun img-url-handler ()
   (handler-case
       (with-database (dbconn *imgdb-store-db-conn-spec*
-                             :database-type *imgdb-store-db-conn-spec*
+                             :database-type *imgdb-store-db-type*
                              :pool t)
         (let ((resize-parameters
                (calculate-resize-parameters-from-request

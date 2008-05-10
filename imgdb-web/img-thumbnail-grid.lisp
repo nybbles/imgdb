@@ -30,9 +30,11 @@
      (loop for img-id in img-ids
         for i from 1 to row-length
         do
-        (htm (:td
-              (:img :src
-                    (format nil "img-urls/thumbnails/~A" img-id))))))))
+        (let ((thumbnail-url (format nil "img-urls/thumbnails/~A" img-id))
+              (img-url (format nil "img-urls/~A" img-id)))
+          (htm (:td
+                (:a :class "thumbnail" :href img-url
+                    (:img :src thumbnail-url)))))))))
 
 (defun create-links-for-query-resultset
     (constraints current img-set-size dbconn)
