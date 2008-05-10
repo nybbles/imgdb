@@ -20,12 +20,12 @@
                "It's still under construction, so everything looks terrible.")
               (str
                (create-thumbnail-grid
-                (get-img-ids 1 10
+                (get-img-ids 1 40
                              (translate-constraints-to-sql '())
                              dbconn)))
               (:br)
               (str
-               (create-links-for-query-resultset '() 1 10 dbconn)))
+               (create-links-for-query-resultset '() 1 40 dbconn)))
         (:div :id "date-cloud"
               (:h3 :align "center" "Pictures by year")
               (str (generate-tag-cloud

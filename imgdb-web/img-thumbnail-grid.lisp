@@ -18,7 +18,9 @@
   (case num-img-ids
     (5 5)
     (10 5)
-    (20 6)
+    (20 5)
+    (40 8)
+    (50 10)
     (t (ceiling (sqrt num-img-ids)))))
 
 (defun create-thumbnail-grid-row
@@ -38,7 +40,8 @@
                  (translate-constraints-to-sql constraints)
                  dbconn))
          (intervals-list
-          (collect-query-resultset-link-intervals current range img-set-size)))
+          (collect-query-resultset-link-intervals
+           current range img-set-size 10)))
     (with-html-output-to-string (output nil)
       (:span :class "query-resultset-links"
        (loop for intervals in intervals-list
@@ -114,16 +117,19 @@
              (sql-operation '= (sql-expression :attribute name) value))
          result))))))
 
-(defun collect-query-resultset-link-intervals (current range img-set-size)
+(defun collect-query-resultset-link-intervals
+    (current range img-set-size &optional (max-num-intervals img-set-size))
   (loop for i from 1
-       for intervals = (collect-intervals current range i img-set-size)
+       for intervals = (collect-intervals current range i
+                                          img-set-size max-num-intervals)
        collect intervals
-       until (not (= (length intervals) img-set-size))))
+       until (not (= (length intervals) max-num-intervals))))
 
-(defun collect-intervals (current range power &optional (base 10))
+(defun collect-intervals
+    (current range power &optional (base 10) (max-num-intervals base))
   (assert (evenp base))
-  (let* ((interval-size (expt base power))
-         (endpoints (get-endpoints current range power base))
+  (let* ((interval-size (* base (expt max-num-intervals (- power 1))))
+         (endpoints (get-endpoints current range power base max-num-intervals))
          (aligned-lower-endpoint
           (align-number (first endpoints) interval-size :up))
          (aligned-upper-endpoint
@@ -139,9 +145,10 @@
       (push (first endpoints) result))
     result))
 
-(defun get-endpoints (current range power &optional (base 10))
+(defun get-endpoints
+    (current range power &optional (base 10) (max-num-intervals base))
   (assert (evenp base))
-  (let* ((num-side-intervals (- (/ base 2) 1))
+  (let* ((num-side-intervals (- (/ max-num-intervals 2) 1))
          (interval-size (expt base power))
          (initial-interval (get-initial-interval current interval-size))
          (rhs (min (second range)
@@ -156,7 +163,7 @@
             (and (not rhs-spans-range) (not lhs-spans-range)))
         (list lhs rhs)
         (let* ((num-intervals (get-num-intervals lhs rhs interval-size))
-               (intervals-needed (- base num-intervals 1))
+               (intervals-needed (- max-num-intervals num-intervals 1))
                (distance-to-endpoint (* intervals-needed interval-size)))
           (cond
             ((and rhs-spans-range (not lhs-spans-range))
