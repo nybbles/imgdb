@@ -49,5 +49,8 @@
 
 (defun translate-get-parameters-to-constraints (params)
   (mapcar #'(lambda (x)
-                (list (car x) (cdr x)))
+                (list (intern (string-upcase (car x)))
+                      (let ((value (cdr x)))
+                        (handler-case (parse-integer value)
+                          (parse-error () value)))))
           (remove-if-not #'is-valid-constraint params)))
