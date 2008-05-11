@@ -88,7 +88,7 @@
                                   :database database))))
 
 (defun get-img-ids (current num-img-ids where-clause database)
-  (let ((offset (* num-img-ids (floor (- current 1) num-img-ids))))
+  (let ((offset (- (* num-img-ids (floor current num-img-ids)) 1)))
     (select-img-records ([digest])
                         :where where-clause
                         :order-by '(([year] :desc)
