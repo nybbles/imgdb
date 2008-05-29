@@ -1,0 +1,111 @@
+imgdb-store should have methods for requesting resized images and
+thumbnails. It should also handle the caching of the generated files
+because it has direct access to the database. The actual location of
+the files should not be exposed to imgdb-web. The files should appear
+as binary streams. Flushing of the cache is dependant on the total
+cache disk size.
+
+The resize cache has two tables: one for the actual cache entries and
+another for holds on cache entries.
+
+Cache entries table:
+  - original-img-id
+  - url
+  - width
+  - height
+  - filesize
+  - valid
+
+Cache holds table:
+  - original-img-id
+  - width
+  - height
+  - thread-id
+  - use-time
+
+Getting unused cache entries (unused cache entries):
+SELECT originalimgid, width, height
+  FROM resizecache LEFT OUTER JOIN resizecacheholds
+       ON (resizecache.originalimgid =
+             resizecacheholds.originalimgid  AND
+           resizecache.width = resizecacheholds.width AND
+           resizecache.height = resizecacheholds.height)
+  WHERE resizecacheholds.originalimgid IS NULL;
+
+Getting longest cache holds:
+SELECT originalimgid, width, height,
+       (get-universal-time) - min(use-time)
+  FROM resizecache INNER JOIN resizecacheholds
+       ON (resizecache.originalimgid =
+             resizecacheholds.originalimgid  AND
+           resizecache.width = resizecacheholds.width AND
+           resizecache.height = resizecacheholds.height)
+  GROUP BY (resizecache.originalimgid =
+              resizecacheholds.originalimgid  AND
+            resizecache.width = resizecacheholds.width AND
+            resizecache.height = resizecacheholds.height)
+  SORT BY (get-universal-time) - min(use-time) ASC
+
+Acquiring a cache entry (postgresql-specific):
+INSERT into resizecacheholds
+       (originalimgid, width, height, thread-id, usetime)
+       VALUES
+       (%~, %~, %~, (current-thread), (get-universal-time))
+
+BEGIN WORK
+SELECT valid FROM resizecache
+       WHERE (originalimgid = %~ AND
+              width = %~ AND height = %~)
+       FOR SHARE
+
+(when (not found)
+  LOCK TABLE resizecache IN ACCESS EXCLUSIVE MODE
+  SELECT valid FROM resizecache
+         WHERE (originalimgid = %~ AND
+                width = %~ AND height = %~)
+  (when (not found)
+    (INSERT into resizecache
+            (originalimgid, url, width, height, filesize, valid)
+            VALUES
+            (%~, %~, %~, %~, %~, false)))
+  COMMIT WORK
+  BEGIN WORK)
+
+(when (not valid)
+  SELECT valid FROM resizecache
+         WHERE (originalimgid = %~ AND
+                width = %~ AND height = %~)
+         FOR UPDATE
+  (when (not valid)
+    (make-cache-entry-valid)
+    UPDATE resizecache SET valid = true
+           WHERE (originalimgid = %~ AND
+                  width = %~ AND height = %~)))
+
+COMMIT WORK
+
+Releasing a cache entry:
+DELETE from resizecacheholds
+       WHERE (originalimgid = %~ AND width = %~ AND height = %~ AND
+              threadid = (current-thread) AND (get-universal-time))
+
+Removing unused cache entries from the cache (Postgresql-specific):
+BEGIN WORK
+SELECT originalimgid, width, height, resizecache.url
+  FROM resizecache LEFT OUTER JOIN resizecacheholds
+       ON (resizecache.originalimgid =
+             resizecacheholds.originalimgid  AND
+           resizecache.width = resizecacheholds.width AND
+           resizecache.height = resizecacheholds.height)
+  WHERE resizecacheholds.originalimgid IS NULL
+  SORT BY resizecache.filesize DESC
+  FOR UPDATE
+
+(do-list (unused-urls)
+  (remove-file unused-url)
+  DELETE FROM resizecache WHERE url = unused-url)
+COMMIT WORK
+
+Removing stale cache holds (Postgresql-specific):
+- Sort cache holds by hold time.
+- Delete the cache holds that have taken a ridiculous amount of time.

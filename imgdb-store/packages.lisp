@@ -1,7 +1,8 @@
 (in-package #:cl-user)
 
 (defpackage :imgdb-store
-  (:use :cl :cl-fad :ironclad :clsql :cl-imgmagick :cl-ppcre)
+  (:use :cl :cl-fad :ironclad :clsql :cl-ppcre :hunchentoot-mp
+        :cl-imgmagick :ffi-utils)
   (:export :create-imgdb-dbconn :destroy-imgdb-dbconn
            :img-table-exists :create-img-table :drop-img-table
            :index-img-drop :select-img-records :count-img-records

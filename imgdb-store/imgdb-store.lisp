@@ -130,13 +130,7 @@
     (delete-file img-url)))
 
 (defmacro select-img-records (select-columns &rest args)
-  (when (position :from args)
-    (error "Invalid keyword argument"))
-  (unless (position :database args)
-    (error "Missing database connection argument"))
-  `(select ,@select-columns
-           :from ,*img-table-name*
-           ,@args))
+  `(select-from-table *img-table-name* ,select-columns ,@args))
 
 (defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]] 
@@ -180,6 +174,7 @@
   (table-exists-p *img-table-name* :database dbconn))
 
 ;;; Stubs
+'(defun get-image (img-id dbconn))
 '(defun repair-img-store (img-store dbconn))
 
 (restore-sql-reader-syntax-state)
