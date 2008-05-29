@@ -30,13 +30,16 @@
               :database dbconn)))
 
 (defun lock-cache-table-for-write-postgresql (dbconn)
-  (caar (query "LOCK TABLE resizecache IN ACCESS EXCLUSIVE MODE"
+  (caar (query (concatenate
+                'string
+                "LOCK TABLE " (sql *img-resize-cache-table*)
+                " IN ACCESS EXCLUSIVE MODE")
                :database dbconn)))
 
 (defun acquire-resize-cache-entry-postgresql
     (img-id dimensions thumbnail dbconn)
   (assert (eq (database-type dbconn) :postgresql))
-  (add-resize-cache-entry-hold img-id dimensions dbconn)
+  (add-resize-cache-entry-hold img-id dimensions thumbnail dbconn)
   (start-transaction :database dbconn)
   (let*
       ((found (lock-cache-entry-for-read-postgresql
@@ -52,7 +55,8 @@
         (let ((resized-image-url
                (generate-resize-cache-image-url
                 img-id dimensions thumbnail dbconn)))
-          (add-resize-cache-entry img-id dimensions resized-image-url nil))
+          (add-resize-cache-entry img-id dimensions thumbnail
+                                  resized-image-url nil dbconn))
         (commit :database dbconn)
         (setf valid nil))
       (when (in-transaction-p :database dbconn)
@@ -66,7 +70,15 @@
         (setf valid (first found))
         (unless valid
           (create-resized-image img-id dimensions thumbnail dbconn)
-          (set-resize-cache-entry-validity img-id dimensions thumbnail t dbconn)
+          (let ((resized-image-filesize
+                 (with-open-file
+                     (s (get-resize-cache-image-url
+                         img-id dimensions thumbnail dbconn))
+                   (file-length s))))
+            (set-resize-cache-entry-validity img-id dimensions thumbnail
+                                             t dbconn)
+            (set-resize-cache-entry-filesize img-id dimensions thumbnail
+                                             resized-image-filesize dbconn))
           (commit :database dbconn)))))
   (let ((resized-image-url
          (get-resize-cache-image-url img-id dimensions thumbnail dbconn)))

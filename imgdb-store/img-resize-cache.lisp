@@ -14,21 +14,37 @@
             (let ((,url-name
                    (acquire-resize-cache-entry ,img-id ,dimensions
                                                nil ,dbconn-name)))
-              (with-open-file (,out :direction :input :if-does-not-exist :error)
+              (with-open-file
+                  (,out ,url-name
+                        :element-type '(unsigned-byte 8)
+                        :direction :input :if-does-not-exist :error)
                 ,@body))
+         (when (in-transaction-p :database ,dbconn-name)
+           (rollback :database ,dbconn-name))
          (release-resize-cache-entry ,img-id ,dimensions nil ,dbconn-name)))))
 
 (defmacro with-thumbnail ((out img-id size) &body body)
   (let ((dbconn-name (gensym "DBCONN-"))
         (url-name (gensym "URL-")))
     `(with-database (,dbconn-name *img-resize-cache-conn-spec*
-                     :database-type *img-resize-cache-conn-type*)
-       (unwind-protect
-            (let ((,url-name
-                   (acquire-resize-cache-entry ,img-id (list ,size ,size)
-                                               t ,dbconn-name)))
-              (with-open-file (,out :direction :input :if-does-not-exist :error)
-                ,@body))
+                                  :database-type *img-resize-cache-conn-type*)
+       (with-open-file
+           (err-argh "/Users/nimalan/Desktop/error.log"
+                :direction :output :if-exists :append
+                :if-does-not-exist :create)
+         (format err-argh "BEGIN: ~A~%" ,img-id)
+         (unwind-protect
+              (let ((,url-name
+                     (acquire-resize-cache-entry ,img-id (list ,size ,size)
+                                                 t ,dbconn-name)))
+                (with-open-file
+                    (,out ,url-name
+                          :element-type '(unsigned-byte 8)
+                          :direction :input :if-does-not-exist :error)
+                  ,@body
+                  (format err-argh "END: ~A~%" ,img-id))))
+         (when (in-transaction-p :database ,dbconn-name)
+           (rollback :database ,dbconn-name))
          (release-resize-cache-entry ,img-id (list ,size ,size)
                                      t ,dbconn-name)))))
 
@@ -36,9 +52,10 @@
   `(select-from-table *img-resize-cache-table* ,select-columns ,@args))
 
 (defun get-original-image-url (img-id dbconn)
-  (select-img-records ([url])
-                      :where [= [digest] img-id]
-                      :flatp t :database dbconn))
+  (car
+   (select-img-records ([url])
+                       :where [= [digest] img-id]
+                       :flatp t :database dbconn)))
 
 (defun get-resize-cache-image-url (img-id dimensions thumbnail dbconn)
   (caar (select-resize-cache-entries
@@ -51,19 +68,20 @@
 
 (defun generate-resize-cache-image-url
     (original-img-id dimensions thumbnail database)
-  (let* ((width (write-to-string (first dimensions)))
-         (height (write-to-string (second dimensions)))
-         (original-img-url (get-original-image-url original-img-id database))
-         (filename original-img-id)
-         (filetype (pathname-type original-img-url)))
-    (merge-pathnames
-     (make-pathname :name (concatenate 'string filename "-" width "x" height)
-                    :type filetype)
-     (if thumbnail
-         (merge-pathnames
-          (make-pathname :directory (list :relative "thumbnails"))
-          *img-resize-cache-store*)
-         *img-resize-cache-store*))))
+  (namestring
+   (let* ((width (write-to-string (first dimensions)))
+          (height (write-to-string (second dimensions)))
+          (original-img-url (get-original-image-url original-img-id database))
+          (filename original-img-id)
+          (filetype (pathname-type original-img-url)))
+     (merge-pathnames
+      (make-pathname :name (concatenate 'string filename "-" width "x" height)
+                     :type filetype)
+      (if thumbnail
+          (merge-pathnames
+           (make-pathname :directory (list :relative "thumbnails"))
+           *img-resize-cache-store*)
+          *img-resize-cache-store*)))))
 
 (defun acquire-resize-cache-entry (img-id dimensions thumbnail dbconn)
   (ecase (database-type dbconn)
@@ -79,9 +97,7 @@
                                 thumbnail valid filesize)
                   :values
                   (list img-id url (first dimensions) (second dimensions)
-                        thumbnail valid
-                        (with-open-file (s url)
-                          (file-length s)))
+                        thumbnail valid 0)
                   :database dbconn))
 
 (defun remove-resize-cache-entry (img-id dimensions thumbnail dbconn)
@@ -97,6 +113,17 @@
   (update-records *img-resize-cache-table*
                   :attributes '(valid)
                   :values (list valid)
+                  :where [and [= [originalimgid] img-id]
+                              [= [width] (first dimensions)]
+                              [= [height] (second dimensions)]
+                              [= [thumbnail] thumbnail]]
+                  :database dbconn))
+
+(defun set-resize-cache-entry-filesize
+    (img-id dimensions thumbnail filesize dbconn)
+  (update-records *img-resize-cache-table*
+                  :attributes '(filesize)
+                  :values (list filesize)
                   :where [and [= [originalimgid] img-id]
                               [= [width] (first dimensions)]
                               [= [height] (second dimensions)]
@@ -183,7 +210,7 @@
                   ([thumbnail] boolean :not-null)
                   ([url] string :not-null :unique)
                   ([filesize] integer :not-null)
-                  ([valid] boolean :not-null))
+                  ([valid] boolean))
                 :constraints
                 '("PRIMARY KEY (originalimgid, width, height, thumbnail)")
                 :database dbconn)
@@ -193,15 +220,15 @@
                   ([height] integer :not-null)
                   ([thumbnail] boolean :not-null)
                   ([threadid] string :not-null)
-                  ([usetime] integer :not-null))
+                  ([usetime] bigint :not-null))
                 :constraints
-                '("PRIMARY KEY (originalimgid, width, height, thumbnail threadid)")
+                '("PRIMARY KEY (originalimgid, width, height, thumbnail, threadid)")
                 :database dbconn))
 
 (defun drop-resize-cache-tables (dbconn)
   (drop-table *img-resize-cache-table* :database dbconn)
   (drop-table *img-resize-cache-holds-table* :database dbconn))
-(defun resize-cache-tables-exist (dbconn)
+(defun resize-cache-tables-exist? (dbconn)
   (table-exists-p *img-resize-cache-table* :database dbconn)
   (table-exists-p *img-resize-cache-holds-table* :database dbconn))
 
@@ -228,7 +255,9 @@
     (magick-adaptive-resize-image wand new-width new-height)
     (with-image-blob (wand img-blob img-blob-size)
       (with-open-file
-          (out resize-cache-url :direction :output :if-exists :error)
+          (out resize-cache-url
+               :element-type '(unsigned-byte 8)
+               :direction :output :if-exists :error)
         (iterate-over-foreign-buffer
          (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
          (write-sequence vec out :end vec-pos))))))
@@ -246,7 +275,9 @@
       (magick-thumbnail-image wand new-size new-size)
       (with-image-blob (wand img-blob img-blob-size)
         (with-open-file
-            (out resize-cache-url :direction :output :if-exists :error)
+            (out resize-cache-url
+                 :element-type '(unsigned-byte 8)
+                 :direction :output :if-exists :error)
           (iterate-over-foreign-buffer
            (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
            (write-sequence vec out :end vec-pos)))))))

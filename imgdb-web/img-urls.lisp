@@ -16,23 +16,38 @@
                (calculate-resize-parameters-from-request
                 "/img-urls" dbconn)))
           (ecase (length resize-parameters)
-            (3 (let ((img-store-url (first resize-parameters))
-                     (width (second resize-parameters))
-                     (height (third resize-parameters)))
-                 (transfer-resized-image img-store-url width height)))
-            (1 (let ((img-store-url (first resize-parameters)))
+            (4 (let ((img-id (first resize-parameters))
+                     (width (third resize-parameters))
+                     (height (fourth resize-parameters)))
+                 (transfer-resized-image img-id width height)))
+            (2 (let ((img-store-url (second resize-parameters)))
                  (transfer-unresized-image img-store-url))))))
     (invalid-img-url-request () (not-found-page))))
 
 (defun img-thumbnail-handler ()
   (handler-case
-      (with-database (dbconn *imgdb-store-db-conn-spec*
-                             :database-type *imgdb-store-db-type*
-                             :pool t)
-        (let ((resize-parameters
-               (calculate-resize-parameters-from-request
-                "/img-urls/thumbnails" dbconn)))
-          (apply #'transfer-image-thumbnail resize-parameters)))))
+      (with-open-file
+          (err-argh "/Users/nimalan/Desktop/error.log"
+                    :direction :output :if-exists :append
+                    :if-does-not-exist :create)
+        (format err-argh "handler BEGIN: ~A~%"
+                (get-img-id-from-url (script-name) "/img-urls/thumbnails"))
+        (with-database (dbconn *imgdb-store-db-conn-spec*
+                               :database-type *imgdb-store-db-type*
+                               :pool t)  
+          (let ((resize-parameters
+                 (calculate-resize-parameters-from-request
+                  "/img-urls/thumbnails" dbconn)))
+            (ecase (length resize-parameters)
+              (4 (let ((img-id (first resize-parameters))
+                       (width (third resize-parameters))
+                       (height (fourth resize-parameters)))
+                   (transfer-image-thumbnail img-id width height)))
+              (2 (let ((img-id (first resize-parameters)))
+                   (transfer-image-thumbnail img-id))))))
+        (format err-argh "handler END: ~A~%"
+                (get-img-id-from-url (script-name) "/img-urls/thumbnails")))
+    (invalid-img-url-request () (not-found-page))))
 
 (defun calculate-resize-parameters-from-request (prefix dbconn)
   (let* ((img-id (get-img-id-from-url (script-name) prefix))
@@ -57,8 +72,8 @@
                           (resize-required? img-width img-height
                                             req-type req-arg)))
                      (if (not resized-dimensions)
-                         (list img-store-url)
-                         (list img-store-url
+                         (list img-id img-store-url)
+                         (list img-id img-store-url
                                (first resized-dimensions)
                                (second resized-dimensions))))
                    (signal 'invalid-img-url-request))))))
@@ -67,7 +82,7 @@
               (first (get-img-store-url-and-size-from-img-id img-id dbconn))))
          (if (null img-store-url)
              (signal 'invalid-img-url-request)
-             (list img-store-url))))
+             (list img-id img-store-url))))
       (t (signal 'invalid-img-url-request)))))
 
 (defun transfer-unresized-image (img-store-url)
@@ -87,49 +102,45 @@
             do (write-sequence buf out :end pos)
                (finish-output out)))))
 
-(defun transfer-resized-image (img-store-url new-width new-height)
+(defun transfer-resized-image (img-id new-width new-height)
   (setf (content-type) "image/jpeg" ;; only valid for jpegs
         (header-out "Last-Modified")
         (rfc-1123-date (get-universal-time)))
-  (with-magick-wand (wand)
-    (magick-read-image wand img-store-url)
-    (magick-adaptive-resize-image wand new-width new-height)
-    (with-image-blob (wand img-blob img-blob-size)
-      (setf (content-length) img-blob-size)
-      (let ((out (flexi-stream-stream (send-headers))))
-        (iterate-over-foreign-buffer
-            (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
-          (write-sequence vec out :end vec-pos)
-          (finish-output out))))))
+  (with-resized-image (in img-id (list new-width new-height))
+    (setf (content-length) (file-length in))
+    (let ((out (flexi-stream-stream (send-headers))))
+      (loop with buf = (make-array 65536 :element-type '(unsigned-byte 8))
+           for buf-pos = (read-sequence buf in)
+           until (zerop buf-pos)
+           do (write-sequence buf out :end buf-pos)
+              (finish-output out)))))
 
 (defvar *default-thumbnail-size* 100)
 
-(defun transfer-image-thumbnail (img-store-url &optional new-width new-height)
-  (assert
-   (or (and (null new-width) (null new-height))
-       (and (not (null new-width)) (not (null new-height)))))
-  (setf (content-type) "image/jpeg" ;; only valid for jpegs
-        (header-out "Last-Modified")
-        (rfc-1123-date (get-universal-time)))
-  (with-magick-wand (wand)
-    (magick-read-image wand img-store-url)
-    (let* ((width (image-width wand))
-           (height (image-height wand))
-           (size (min width height))
-           (x (floor (/ (- width size) 2)))
-           (y (floor (/ (- height size) 2)))
-           (new-size (if (and (null new-width) (null new-height))
+(defun transfer-image-thumbnail (img-id &optional new-width new-height)
+  (with-open-file
+      (err-argh "/Users/nimalan/Desktop/error.log"
+                :direction :output :if-exists :append
+                :if-does-not-exist :create)
+    (format err-argh "transfer BEGIN ~A~%" img-id)
+    (assert
+     (or (and (null new-width) (null new-height))
+         (and (not (null new-width)) (not (null new-height)))))
+    (setf (content-type) "image/jpeg" ;; only valid for jpegs
+          (header-out "Last-Modified")
+          (rfc-1123-date (get-universal-time)))
+    (let* ((new-size (if (and (null new-width) (null new-height))
                          *default-thumbnail-size*
                          (min new-width new-height))))
-      (magick-crop-image wand size size  x y)
-      (magick-thumbnail-image wand new-size new-size)
-      (with-image-blob (wand img-blob img-blob-size)
-        (setf (content-length) img-blob-size)
+      (with-thumbnail (in img-id new-size)
+        (setf (content-length) (file-length in))
         (let ((out (flexi-stream-stream (send-headers))))
-          (iterate-over-foreign-buffer
-              (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
-            (write-sequence vec out :end vec-pos)
-            (finish-output out)))))))
+          (loop with buf = (make-array 65536 :element-type '(unsigned-byte 8))
+             for buf-pos = (read-sequence buf in)
+             until (zerop buf-pos)
+             do (write-sequence buf out :end buf-pos)
+             (finish-output out)))))
+    (format err-argh "transfer END ~A~%" img-id)))
 
 (defun resize-required? (width height req-type req-arg)
   (ccase req-type

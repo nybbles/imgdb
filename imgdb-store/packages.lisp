@@ -11,4 +11,5 @@
            :locally-disable-sql-reader-syntax
            :restore-sql-reader-syntax-state
            :sql-operation :sql-expression
-           :with-database))
+           :with-database
+           :with-thumbnail :with-resized-image))
