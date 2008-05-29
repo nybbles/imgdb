@@ -9,7 +9,9 @@
   (let ((dbconn-name (gensym "DBCONN-"))
         (url-name (gensym "URL-")))
     `(with-database (,dbconn-name *img-resize-cache-conn-spec*
-                     :database-type *img-resize-cache-conn-type*)
+                                  :database-type *img-resize-cache-conn-type*
+                                  :pool t
+                                  :if-exists :new)
        (unwind-protect
             (let ((,url-name
                    (acquire-resize-cache-entry ,img-id ,dimensions
@@ -27,22 +29,18 @@
   (let ((dbconn-name (gensym "DBCONN-"))
         (url-name (gensym "URL-")))
     `(with-database (,dbconn-name *img-resize-cache-conn-spec*
-                                  :database-type *img-resize-cache-conn-type*)
-       (with-open-file
-           (err-argh "/Users/nimalan/Desktop/error.log"
-                :direction :output :if-exists :append
-                :if-does-not-exist :create)
-         (format err-argh "BEGIN: ~A~%" ,img-id)
-         (unwind-protect
-              (let ((,url-name
-                     (acquire-resize-cache-entry ,img-id (list ,size ,size)
-                                                 t ,dbconn-name)))
-                (with-open-file
-                    (,out ,url-name
-                          :element-type '(unsigned-byte 8)
-                          :direction :input :if-does-not-exist :error)
-                  ,@body
-                  (format err-argh "END: ~A~%" ,img-id))))
+                                  :database-type *img-resize-cache-conn-type*
+                                  :pool t
+                                  :if-exists :new)
+       (unwind-protect
+            (let ((,url-name
+                   (acquire-resize-cache-entry ,img-id (list ,size ,size)
+                                               t ,dbconn-name)))
+              (with-open-file
+                  (,out ,url-name
+                        :element-type '(unsigned-byte 8)
+                        :direction :input :if-does-not-exist :error)
+                ,@body))
          (when (in-transaction-p :database ,dbconn-name)
            (rollback :database ,dbconn-name))
          (release-resize-cache-entry ,img-id (list ,size ,size)

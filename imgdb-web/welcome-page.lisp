@@ -5,7 +5,7 @@
 (defun welcome-page ()
   (with-database (dbconn *imgdb-store-db-conn-spec*
                          :database-type *imgdb-store-db-type*
-                         :pool t)
+                         :pool t :if-exists :new)
     (with-html-output-to-string (output nil :prologue t)
       (:html
        (str (generate-html-head "imgdb"))

@@ -11,7 +11,7 @@
   (handler-case
       (with-database (dbconn *imgdb-store-db-conn-spec*
                              :database-type *imgdb-store-db-type*
-                             :pool t)
+                             :pool t :if-exists :new)
         (let ((resize-parameters
                (calculate-resize-parameters-from-request
                 "/img-urls" dbconn)))
@@ -26,27 +26,19 @@
 
 (defun img-thumbnail-handler ()
   (handler-case
-      (with-open-file
-          (err-argh "/Users/nimalan/Desktop/error.log"
-                    :direction :output :if-exists :append
-                    :if-does-not-exist :create)
-        (format err-argh "handler BEGIN: ~A~%"
-                (get-img-id-from-url (script-name) "/img-urls/thumbnails"))
-        (with-database (dbconn *imgdb-store-db-conn-spec*
-                               :database-type *imgdb-store-db-type*
-                               :pool t)  
-          (let ((resize-parameters
-                 (calculate-resize-parameters-from-request
-                  "/img-urls/thumbnails" dbconn)))
-            (ecase (length resize-parameters)
-              (4 (let ((img-id (first resize-parameters))
-                       (width (third resize-parameters))
-                       (height (fourth resize-parameters)))
-                   (transfer-image-thumbnail img-id width height)))
-              (2 (let ((img-id (first resize-parameters)))
-                   (transfer-image-thumbnail img-id))))))
-        (format err-argh "handler END: ~A~%"
-                (get-img-id-from-url (script-name) "/img-urls/thumbnails")))
+      (with-database (dbconn *imgdb-store-db-conn-spec*
+                             :database-type *imgdb-store-db-type*
+                             :pool t :if-exists :new)
+        (let ((resize-parameters
+               (calculate-resize-parameters-from-request
+                "/img-urls/thumbnails" dbconn)))
+          (ecase (length resize-parameters)
+            (4 (let ((img-id (first resize-parameters))
+                     (width (third resize-parameters))
+                     (height (fourth resize-parameters)))
+                 (transfer-image-thumbnail img-id width height)))
+            (2 (let ((img-id (first resize-parameters)))
+                 (transfer-image-thumbnail img-id))))))
     (invalid-img-url-request () (not-found-page))))
 
 (defun calculate-resize-parameters-from-request (prefix dbconn)
@@ -118,29 +110,23 @@
 (defvar *default-thumbnail-size* 100)
 
 (defun transfer-image-thumbnail (img-id &optional new-width new-height)
-  (with-open-file
-      (err-argh "/Users/nimalan/Desktop/error.log"
-                :direction :output :if-exists :append
-                :if-does-not-exist :create)
-    (format err-argh "transfer BEGIN ~A~%" img-id)
-    (assert
-     (or (and (null new-width) (null new-height))
-         (and (not (null new-width)) (not (null new-height)))))
-    (setf (content-type) "image/jpeg" ;; only valid for jpegs
-          (header-out "Last-Modified")
-          (rfc-1123-date (get-universal-time)))
-    (let* ((new-size (if (and (null new-width) (null new-height))
-                         *default-thumbnail-size*
-                         (min new-width new-height))))
-      (with-thumbnail (in img-id new-size)
-        (setf (content-length) (file-length in))
-        (let ((out (flexi-stream-stream (send-headers))))
-          (loop with buf = (make-array 65536 :element-type '(unsigned-byte 8))
-             for buf-pos = (read-sequence buf in)
-             until (zerop buf-pos)
-             do (write-sequence buf out :end buf-pos)
-             (finish-output out)))))
-    (format err-argh "transfer END ~A~%" img-id)))
+  (assert
+   (or (and (null new-width) (null new-height))
+       (and (not (null new-width)) (not (null new-height)))))
+  (setf (content-type) "image/jpeg" ;; only valid for jpegs
+        (header-out "Last-Modified")
+        (rfc-1123-date (get-universal-time)))
+  (let* ((new-size (if (and (null new-width) (null new-height))
+                       *default-thumbnail-size*
+                       (min new-width new-height))))
+    (with-thumbnail (in img-id new-size)
+      (setf (content-length) (file-length in))
+      (let ((out (flexi-stream-stream (send-headers))))
+        (loop with buf = (make-array 8192 :element-type '(unsigned-byte 8))
+           for buf-pos = (read-sequence buf in)
+           until (zerop buf-pos)
+           do (write-sequence buf out :end buf-pos)
+           (finish-output out))))))
 
 (defun resize-required? (width height req-type req-arg)
   (ccase req-type
