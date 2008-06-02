@@ -42,10 +42,12 @@
   (add-resize-cache-entry-hold img-id dimensions thumbnail dbconn)
   (start-transaction :database dbconn)
   (let*
-      ((found (lock-cache-entry-for-read-postgresql
+      ((found (get-resize-cache-entry-validity
                img-id dimensions thumbnail dbconn))
        (valid (first found)))
     (unless found
+      (rollback :database dbconn)
+      (start-transaction :database dbconn)
       (lock-cache-table-for-write-postgresql dbconn)
       (setf found
             (lock-cache-entry-for-write-postgresql

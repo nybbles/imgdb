@@ -56,13 +56,14 @@
                        :flatp t :database dbconn)))
 
 (defun get-resize-cache-image-url (img-id dimensions thumbnail dbconn)
-  (caar (select-resize-cache-entries
-         ([url])
-         :where [and [= [originalimgid] img-id]
-                     [= [width] (first dimensions)]
-                     [= [height] (second dimensions)]
-                     [= [thumbnail] thumbnail]]
-         :database dbconn)))
+  (car (select-resize-cache-entries
+        ([url])
+        :where [and [= [originalimgid] img-id]
+                    [= [width] (first dimensions)]
+                    [= [height] (second dimensions)]
+                    [= [thumbnail] (if thumbnail t "f")]]
+        :flatp t
+        :database dbconn)))
 
 (defun generate-resize-cache-image-url
     (original-img-id dimensions thumbnail database)
@@ -95,7 +96,7 @@
                                 thumbnail valid filesize)
                   :values
                   (list img-id url (first dimensions) (second dimensions)
-                        thumbnail valid 0)
+                        (if thumbnail t "f") valid 0)
                   :database dbconn))
 
 (defun remove-resize-cache-entry (img-id dimensions thumbnail dbconn)
@@ -105,6 +106,18 @@
                               [= [height] (second dimensions)]
                               [= [thumbnail] thumbnail]]
                   :database dbconn))
+
+(defun get-resize-cache-entry-validity (img-id dimensions thumbnail dbconn)
+  (let ((result (select-resize-cache-entries
+                 ([valid])
+                 :where [and [= [originalimgid] img-id]
+                             [= [width] (first dimensions)]
+                             [= [height] (second dimensions)]
+                             [= [thumbnail] thumbnail]]
+                 :flatp t
+                 :database dbconn)))
+    (assert (not (> (length result) 1)))
+    result))
 
 (defun set-resize-cache-entry-validity
     (img-id dimensions thumbnail valid dbconn)
@@ -133,7 +146,7 @@
                   :attributes '(originalimgid width height
                                 thumbnail threadid usetime)
                   :values (list img-id (first dimensions) (second dimensions)
-                                thumbnail
+                                (if thumbnail t "f")
                                 (get-thread-id) (get-universal-time))
                   :database dbconn))
 
@@ -241,10 +254,11 @@
         (width (first dimensions))
         (height (second dimensions)))
     (assert (not (null img-store-url)))
+    (assert (not (null resize-cache-url)))
     (if thumbnail
-        (create-resized-full-image img-store-url resize-cache-url width height)
-        (create-resized-image-thumbnail img-store-url resize-cache-url
-                                        width height))))
+        (create-resized-image-thumbnail img-store-url resize-cache-url width)
+        (create-resized-full-image img-store-url resize-cache-url
+                                   width height))))
 
 (defun create-resized-full-image
     (img-store-url resize-cache-url new-width new-height)

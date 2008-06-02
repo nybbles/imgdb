@@ -44,14 +44,14 @@
 (defun calculate-resize-parameters-from-request (prefix dbconn)
   (let* ((img-id (get-img-id-from-url (script-name) prefix))
          (req-params (get-parameters))
-         (req-type (when req-params (read-from-string (caar req-params))))
+         (req-type (when req-params (caar req-params)))
          (req-arg (when req-params
                     (parse-integer (cdar req-params) :junk-allowed t))))
     (cond
       ((and (= (length req-params) 1)
             (not (null req-arg))
-            (subsetp (list req-type)
-                     '(resize width height)))
+            (subsetp (list req-type) '("resize" "width" "height")
+                     :test #'equal))
        (let ((img-store-url-and-size
               (get-img-store-url-and-size-from-img-id img-id dbconn)))
          (if (null img-store-url-and-size)
@@ -129,23 +129,24 @@
            (finish-output out))))))
 
 (defun resize-required? (width height req-type req-arg)
-  (ccase req-type
-    (resize
+  (cond
+    ((equal req-type "resize")
      (and (not (= req-arg 100))
           (resize-dimensions-by-percentage width height req-arg)))
-    (width
+    ((equal req-type "width")
      (and (not (= req-arg width))
           (resize-dimensions-to-width width height req-arg)))
-    (height
+    ((equal req-type "height")
      (and (not (= req-arg height))
           (resize-dimensions-to-height width height req-arg)))))
 
 (defun resize-valid? (width height req-type req-arg)
   (<= req-arg
-     (ccase req-type
-       (resize 100)
-       (width width)
-       (height height))))
+     (cond
+       ((equal req-type "resize") 100)
+       ((equal req-type "width") width)
+       ((equal req-type "height") height)
+       (t (error "Invalid resize parameter")))))
 
 (defun resize-dimensions-by-percentage (width height percent)
   (mapcar #'(lambda (x)
