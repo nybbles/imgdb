@@ -11,7 +11,7 @@
     `(with-database (,dbconn-name *img-resize-cache-conn-spec*
                                   :database-type *img-resize-cache-conn-type*
                                   :pool t
-                                  :if-exists :new)
+                                  :if-exists :old)
        (unwind-protect
             (let ((,url-name
                    (acquire-resize-cache-entry ,img-id ,dimensions
@@ -31,7 +31,7 @@
     `(with-database (,dbconn-name *img-resize-cache-conn-spec*
                                   :database-type *img-resize-cache-conn-type*
                                   :pool t
-                                  :if-exists :new)
+                                  :if-exists :old)
        (unwind-protect
             (let ((,url-name
                    (acquire-resize-cache-entry ,img-id (list ,size ,size)

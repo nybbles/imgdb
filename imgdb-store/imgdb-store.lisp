@@ -10,7 +10,7 @@
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
   (let ((num-imgs 0))
     (with-database (dbconn db-conn-spec
-                           :database-type db-type :pool t :if-exists :new)
+                           :database-type db-type :pool t :if-exists :old)
       (walk-directory
        img-drop
        (lambda (x)

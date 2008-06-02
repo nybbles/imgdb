@@ -11,7 +11,7 @@
   (handler-case
       (with-database (dbconn *imgdb-store-db-conn-spec*
                              :database-type *imgdb-store-db-type*
-                             :pool t :if-exists :new)
+                             :pool t :if-exists :old)
         (let ((resize-parameters
                (calculate-resize-parameters-from-request
                 "/img-urls" dbconn)))
@@ -28,7 +28,7 @@
   (handler-case
       (with-database (dbconn *imgdb-store-db-conn-spec*
                              :database-type *imgdb-store-db-type*
-                             :pool t :if-exists :new)
+                             :pool t :if-exists :old)
         (let ((resize-parameters
                (calculate-resize-parameters-from-request
                 "/img-urls/thumbnails" dbconn)))

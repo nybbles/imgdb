@@ -8,7 +8,7 @@
             (parse-error () 1))))
     (with-database (dbconn *imgdb-store-db-conn-spec*
                            :database-type *imgdb-store-db-type*
-                           :pool t :if-exists :new)
+                           :pool t :if-exists :old)
       (with-html-output-to-string (output nil :prologue t)
         (:html
          (str (generate-html-head "imgdb"))
