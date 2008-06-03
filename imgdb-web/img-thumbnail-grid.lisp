@@ -56,25 +56,26 @@
                (htm (:br))))))))
 
 (defun get-query-resultset-link (constraints new-current)
-  (concatenate
-   'string
-   "/img-query?current=" (write-to-string new-current)
-   (if (null constraints)
-       ""
-       (apply
-        #'concatenate 'string
-        (mapcar
-         #'(lambda (x)
-             (concatenate
-              'string "&" (translate-constraint-to-url-get-parameter x)))
-         constraints)))))
+  (if (and (null constraints) (= new-current 1))
+      "/"
+      (concatenate
+       'string
+       "/img-query?current=" (write-to-string new-current)
+       (if (null constraints)
+           ""
+           (apply
+            #'concatenate 'string
+            (mapcar
+             #'(lambda (x)
+                 (concatenate
+                  'string "&" (translate-constraint-to-url-get-parameter x)))
+             constraints))))))
 
 (defun translate-constraint-to-url-get-parameter (constraint)
   (let ((name (first constraint))
         (value (second constraint)))
     (concatenate
-     'string
-     (string-downcase (write-to-string name)) "="
+     'string name "="
      (cond ((or (integerp value) (stringp value)) (write-to-string value))
            (t (signal "invalid type for constraint value"))))))
 
@@ -116,7 +117,9 @@
         (cons
          (if (and (equal name "year") (equal value "undated"))
              (sql-operation 'is (sql-expression :attribute name) 'null)
-             (sql-operation '= (sql-expression :attribute name) value))
+             (if (not (integerp value))
+                 (error 'invalid-img-query-error)
+                 (sql-operation '= (sql-expression :attribute name) value)))
          result))))))
 
 (defun collect-query-resultset-link-intervals
