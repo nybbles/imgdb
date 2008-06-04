@@ -1,45 +1,80 @@
 (in-package :imgdb-web)
 
-(defun translate-constraints-to-sql (constraints &optional result)
-  (cond
-    ((and (null constraints) (null result)) nil)
-    ((null constraints)
-     (if (> (length result) 1)
-         (apply #'sql-operation 'and result)
-         (car result)))
-    (t 
-     (let* ((constraint (first constraints))
-            (name (first constraint))
-            (value (second constraint)))
-       (translate-constraints-to-sql
-        (rest constraints)
-        (cons
-         (if (and (equal name "year") (equal value "undated"))
-             (sql-operation 'is (sql-expression :attribute name) 'null)
-             (if (not (integerp value))
-                 (error 'invalid-img-query-error)
-                 (sql-operation '= (sql-expression :attribute name) value)))
-         result))))))
+(defun translate-constraints-to-sql (constraints)
+  (labels
+      ((translate-constraints-to-sql-helper (constraints result)
+         (cond
+           ((and (null constraints) (null result)) nil)
+           ((null constraints)
+            (if (> (length result) 1)
+                (apply #'sql-operation 'and result)
+                (car result)))
+           (t
+            (let ((constraint (first constraints)))
+              (cond
+                ((not (valid-constraint? constraint))
+                 (error 'invalid-img-query-error))
+                ((not (db-constraint? constraint))
+                 (translate-constraints-to-sql-helper (cdr constraints) result))
+                (t
+                 (let ((name (car constraint))
+                       (value (cdr constraint)))
+                   (translate-constraints-to-sql-helper
+                    (cdr constraints)
+                    (cons
+                     (if (and (equal name "year") (equal value "undated"))
+                         (sql-operation 'is
+                                        (sql-expression :attribute name) 'null)
+                         (if (not (integerp value))
+                             (error 'invalid-img-query-error)
+                             (sql-operation '=
+                                            (sql-expression :attribute name)
+                                            value)))
+                     result))))))))))
+    (translate-constraints-to-sql-helper constraints nil)))
 
 (defun translate-get-parameters-to-constraints (params)
-  (if (position-if-not #'is-valid-constraint params)
-      (error 'invalid-img-query-error)
-      (mapcar #'(lambda (x)
-                  (if (is-valid-constraint x)
-                      (list (car x)
-                            (let ((value (cdr x)))
-                              (handler-case (parse-integer value)
-                                (parse-error () value))))
-              params)))))
+  (mapcar #'(lambda (x)
+              (let ((constraint
+                     (cons (car x)
+                           (let ((value (cdr x)))
+                             (unless (stringp value)
+                               (error 'invalid-img-query-error))
+                             (handler-case (parse-integer value)
+                               (parse-error () value))))))
+                (unless (valid-constraint? constraint)
+                  (error 'invalid-img-query-error))
+                constraint))
+          params))
 
-(defparameter *valid-constraints* '("year" "month" "day"))
-(defun is-valid-constraint (x)
-  (and (consp x) (stringp (car x)) (atom (cdr x))
+(defun translate-constraint-to-url-get-parameter (constraint)
+  (let ((name (car constraint))
+        (value (cdr constraint)))
+    (concatenate
+     'string name "="
+     (cond ((or (integerp value) (stringp value)) (write-to-string value))
+           (t (error 'invalid-img-query-error))))))
+
+(defparameter *non-db-constraints* '("current"))
+(defparameter *db-constraints* '("year" "month" "day"))
+(defparameter *valid-constraints* (union *non-db-constraints* *db-constraints*))
+
+(defun valid-constraint? (x)
+  (and (well-formed-constraint? x)
        (member (car x) *valid-constraints* :test #'equal)))
+
+(defun db-constraint? (x)
+  (and (well-formed-constraint? x)
+       (member (car x) *db-constraints* :test #'equal)))
+
+(defun well-formed-constraint? (x)
+  (and (consp x) (stringp (car x)) (atom (cdr x))))
 
 (defun get-current-constraint-value (params)
   (let ((current-assoc (assoc "current" params :test #'equal)))
     (if current-assoc
-        (handler-case (parse-integer (cdr current-assoc))
-          (parse-error () (error 'invalid-img-query-error)))
+        (let ((value (cdr current-assoc)))
+          (unless (integerp value)
+            (error 'invalid-img-query-error))
+          value)
         1)))

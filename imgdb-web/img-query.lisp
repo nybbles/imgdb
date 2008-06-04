@@ -6,7 +6,7 @@
   (handler-case
       (let* ((params (get-parameters))
              (constraints (translate-get-parameters-to-constraints params))
-             (current (get-current-value params)))
+             (current (get-current-constraint-value constraints)))
         (with-database (dbconn *imgdb-store-db-conn-spec*
                                :database-type *imgdb-store-db-type*
                                :pool t :if-exists :old)
@@ -20,8 +20,6 @@
               (:br)
               (:div :id "front-content"
                     (:h1 :align "center" "imgdb")
-                    (:p
-                     "It's still under construction, so everything looks terrible.")
                     (str
                      (create-thumbnail-grid
                       (get-img-ids current 40

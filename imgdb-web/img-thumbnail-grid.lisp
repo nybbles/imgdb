@@ -56,28 +56,23 @@
                (htm (:br))))))))
 
 (defun get-query-resultset-link (constraints new-current)
-  (if (and (null constraints) (= new-current 1))
-      "/"
-      (concatenate
-       'string
-       "/img-query?current=" (write-to-string new-current)
-       (if (null constraints)
-           ""
-           (apply
-            #'concatenate 'string
-            (mapcar
-             #'(lambda (x)
-                 (concatenate
-                  'string "&" (translate-constraint-to-url-get-parameter x)))
-             constraints))))))
-
-(defun translate-constraint-to-url-get-parameter (constraint)
-  (let ((name (first constraint))
-        (value (second constraint)))
-    (concatenate
-     'string name "="
-     (cond ((or (integerp value) (stringp value)) (write-to-string value))
-           (t (signal "invalid type for constraint value"))))))
+  (let ((constraints
+         (if (= new-current 1)
+             constraints
+             (cons (cons "current" new-current) constraints))))
+    (if (null constraints)
+        "/"
+        (loop
+           for constraint in constraints
+           for result =
+             (concatenate 'string "/img-query?"
+                          (translate-constraint-to-url-get-parameter
+                           constraint))
+           then
+           (concatenate
+            'string result "&"
+            (translate-constraint-to-url-get-parameter constraint))
+           finally (return result)))))
 
 (defun in-range? (number range)
   (and (>= number (first range)) (<= number (second range))))
