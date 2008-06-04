@@ -50,29 +50,10 @@
           do (progn
                (loop for i in intervals
                   do (htm (:a
-                           :href (get-query-resultset-link constraints i)
+                           :href (get-query-link-for-constraints constraints i)
                            (str i))
                           (str " ")))
                (htm (:br))))))))
-
-(defun get-query-resultset-link (constraints new-current)
-  (let ((constraints
-         (if (= new-current 1)
-             constraints
-             (cons (cons "current" new-current) constraints))))
-    (if (null constraints)
-        "/"
-        (loop
-           for constraint in constraints
-           for result =
-             (concatenate 'string "/img-query?"
-                          (translate-constraint-to-url-get-parameter
-                           constraint))
-           then
-           (concatenate
-            'string result "&"
-            (translate-constraint-to-url-get-parameter constraint))
-           finally (return result)))))
 
 (defun in-range? (number range)
   (and (>= number (first range)) (<= number (second range))))

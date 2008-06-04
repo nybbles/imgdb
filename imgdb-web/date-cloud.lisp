@@ -15,7 +15,7 @@
    query-results))
 
 (defun get-date-cloud-tag-link (tag-name)
-  (concatenate 'string "img-query" "?year=" tag-name))
+  (get-query-link-for-constraints (list (make-constraint "year" tag-name))))
 
 (defun select-num-imgs-by-year (dbconn)
   (select-img-records ([year] [count [*]])

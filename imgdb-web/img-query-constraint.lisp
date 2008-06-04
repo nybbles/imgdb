@@ -55,6 +55,25 @@
      (cond ((or (integerp value) (stringp value)) (write-to-string value))
            (t (error 'invalid-img-query-error))))))
 
+(defun get-query-link-for-constraints (constraints &optional (new-current 1))
+  (let ((constraints
+         (if (= new-current 1)
+             constraints
+             (cons (cons "current" new-current) constraints))))
+    (if (null constraints)
+        "/"
+        (loop
+           for constraint in constraints
+           for result =
+             (concatenate 'string "/img-query?"
+                          (translate-constraint-to-url-get-parameter
+                           constraint))
+           then
+           (concatenate
+            'string result "&"
+            (translate-constraint-to-url-get-parameter constraint))
+           finally (return result)))))
+
 (defparameter *non-db-constraints* '("current"))
 (defparameter *db-constraints* '("year" "month" "day"))
 (defparameter *valid-constraints* (union *non-db-constraints* *db-constraints*))
@@ -78,3 +97,10 @@
             (error 'invalid-img-query-error))
           value)
         1)))
+
+(defun make-constraint (name value)
+  (assert (stringp name))
+  (assert (or (integerp value) (stringp value)))
+  (cons name
+        (handler-case (parse-integer value)
+          (parse-error () value))))
