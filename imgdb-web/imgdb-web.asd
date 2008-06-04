@@ -9,11 +9,14 @@
    (:file "imgdb-web-css" :depends-on ("imgdb-web-setup"))
    (:file "img-urls" :depends-on ("imgdb-web-setup" "not-found-page"))
    (:file "not-found-page" :depends-on ("xhtml-gen-utils"))
-   (:file "welcome-page" :depends-on ("xhtml-gen-utils" "tag-cloud"))
+   (:file "welcome-page" :depends-on ("xhtml-gen-utils" "date-cloud"))
    (:file "tag-cloud" :depends-on ("packages"))
-   (:file "img-thumbnail-grid" :depends-on ("packages"))
+   (:file "date-cloud" :depends-on ("tag-cloud"))
+   (:file "img-query-constraint" :depends-on ("packages"))
+   (:file "img-thumbnail-grid" :depends-on ("packages" "img-query-constraint"))
    (:file "imgdb-web-server" :depends-on ("imgdb-web-setup"))
-   (:file "img-query" :depends-on ("imgdb-web-setup"))
+   (:file "img-query" :depends-on
+          ("xhtml-gen-utils" "date-cloud" "img-query-constraint"))
    (:file "dispatchers-setup"
           :depends-on
           ("imgdb-web-css" "not-found-page" "img-urls" "welcome-page"))))

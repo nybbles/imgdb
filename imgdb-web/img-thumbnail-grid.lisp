@@ -101,27 +101,6 @@
                         :flatp t
                         :database database)))
 
-(defun translate-constraints-to-sql (constraints &optional result)
-  (cond
-    ((and (null constraints) (null result)) nil)
-    ((null constraints)
-     (if (> (length result) 1)
-         (apply #'sql-operation 'and result)
-         (car result)))
-    (t 
-     (let* ((constraint (first constraints))
-            (name (first constraint))
-            (value (second constraint)))
-       (translate-constraints-to-sql
-        (rest constraints)
-        (cons
-         (if (and (equal name "year") (equal value "undated"))
-             (sql-operation 'is (sql-expression :attribute name) 'null)
-             (if (not (integerp value))
-                 (error 'invalid-img-query-error)
-                 (sql-operation '= (sql-expression :attribute name) value)))
-         result))))))
-
 (defun collect-query-resultset-link-intervals
     (current range img-set-size &optional (max-num-intervals img-set-size))
   (loop for i from 1

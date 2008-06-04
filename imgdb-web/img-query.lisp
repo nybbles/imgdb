@@ -37,25 +37,3 @@
                           (convert-num-imgs-by-year-results-to-tag-list
                            (select-num-imgs-by-year dbconn))))))))))
     (invalid-img-query-error () (not-found-page))))
-
-(defun get-current-value (params)
-  (let ((current-assoc (assoc "current" params :test #'equal)))
-    (if current-assoc
-        (handler-case (parse-integer (cdr current-assoc))
-          (parse-error () (error 'invalid-img-query-error)))
-        1)))
-
-(defparameter *valid-constraints* '("year" "month" "day"))
-(defun is-valid-constraint (x)
-  (and (consp x) (stringp (car x)) (atom (cdr x))
-       (member (car x) *valid-constraints* :test #'equal)))
-
-(defun translate-get-parameters-to-constraints (params)
-  (if (position-if-not #'is-valid-constraint params)
-      (error 'invalid-img-query-error)
-      (mapcar #'(lambda (x)
-                  (list (car x)
-                        (let ((value (cdr x)))
-                          (handler-case (parse-integer value)
-                            (parse-error () value)))))
-              params)))
