@@ -56,6 +56,7 @@
            (t (error 'invalid-img-query-error))))))
 
 (defun get-query-link-for-constraints (constraints &optional (new-current 1))
+  (setf constraints (remove-constraint "current" constraints))
   (let ((constraints
          (if (= new-current 1)
              constraints
@@ -89,10 +90,10 @@
 (defun well-formed-constraint? (x)
   (and (consp x) (stringp (car x)) (atom (cdr x))))
 
-(defun get-current-constraint-value (params)
-  (let ((current-assoc (assoc "current" params :test #'equal)))
-    (if current-assoc
-        (let ((value (cdr current-assoc)))
+(defun get-current-constraint-value (constraints)
+  (let ((current-constraint (find-constraint "current" constraints)))
+    (if current-constraint
+        (let ((value (cdr current-constraint)))
           (unless (integerp value)
             (error 'invalid-img-query-error))
           value)
@@ -104,3 +105,11 @@
   (cons name
         (handler-case (parse-integer value)
           (parse-error () value))))
+
+(defun find-constraint (name constraints)
+  (assoc name constraints :test #'equal))
+
+(defun remove-constraint (name constraints)
+  (remove-if #'(lambda (x)
+                 (equal (car x) name))
+             constraints))
