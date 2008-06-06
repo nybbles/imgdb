@@ -40,9 +40,10 @@
    img-store))
 
 (let ((url-version-scanner (create-scanner "(.+)-(\\d+)$")))
-  (defun get-next-available-img-store-url (img-store-url)
-    (if (is-img-store-url-occupied img-store-url)
+  (defun get-next-available-img-store-url (img-digest img-store-url)
+    (if (is-img-store-url-occupied img-digest img-store-url)
         (get-next-available-img-store-url
+         img-digest
          (let* ((name (pathname-name img-store-url))
                 (type (pathname-type img-store-url))
                 (next-name
@@ -62,17 +63,26 @@
             img-store-url)))
         img-store-url)))
 
-(defun is-img-store-url-occupied (img-store-url)
-  (probe-file img-store-url))
+(defun is-img-store-url-occupied (img-digest img-store-url)
+  (and
+   (probe-file img-store-url)
+   (not
+    (equal img-digest
+           (byte-array-to-hex-string (digest-file :sha1 img-store-url))))))
 
-(defun move-img-from-img-drop-to-img-store (img-url year month day img-store)
+(defun move-img-from-img-drop-to-img-store
+    (img-digest img-url year month day img-store)
   (let ((img-store-url
          (get-next-available-img-store-url
+          img-digest
           (get-img-store-url img-url year month day img-store))))
-    (ensure-directories-exist
-     (directory-namestring img-store-url))
-    (copy-file img-url img-store-url)
-    img-store-url))
+    (if (equal img-url img-store-url)
+        img-store-url
+        (progn
+          (ensure-directories-exist
+           (directory-namestring img-store-url))
+          (copy-file img-url img-store-url)
+          img-store-url))))
 
 (defun skip-img-record-creation (c)
   (declare (ignore c))
@@ -94,7 +104,7 @@
                (img-day (when img-date (third img-date)))
                (img-store-url
                 (move-img-from-img-drop-to-img-store
-                 img-url img-year img-month img-day img-store))
+                 img-digest img-url img-year img-month img-day img-store))
                (img-store-url-digest
                 (byte-array-to-hex-string
                  (digest-sequence
