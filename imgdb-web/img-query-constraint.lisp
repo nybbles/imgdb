@@ -1,5 +1,10 @@
 (in-package :imgdb-web)
 
+(defparameter *non-db-constraints* '("current"))
+(defparameter *db-constraints* '("year" "month" "day"))
+(defparameter *temporal-constraints* '("year" "month" "day"))
+(defparameter *valid-constraints* (union *non-db-constraints* *db-constraints*))
+
 (defun translate-constraints-to-sql (constraints)
   (labels
       ((translate-constraints-to-sql-helper (constraints result)
@@ -10,28 +15,30 @@
                 (apply #'sql-operation 'and result)
                 (car result)))
            (t
-            (let ((constraint (first constraints)))
-              (cond
-                ((not (valid-constraint? constraint))
-                 (error 'invalid-img-query-error))
-                ((not (db-constraint? constraint))
-                 (translate-constraints-to-sql-helper (cdr constraints) result))
-                (t
-                 (let ((name (car constraint))
-                       (value (cdr constraint)))
-                   (translate-constraints-to-sql-helper
-                    (cdr constraints)
-                    (cons
-                     (if (and (equal name "year") (equal value "undated"))
-                         (sql-operation 'is
-                                        (sql-expression :attribute name) 'null)
-                         (if (not (integerp value))
-                             (error 'invalid-img-query-error)
-                             (sql-operation '=
-                                            (sql-expression :attribute name)
-                                            value)))
-                     result))))))))))
+            (let ((constraint (car constraints)))
+              (if (not (valid-constraint? constraint))
+                  (error 'invalid-img-query-error)
+                  (translate-constraints-to-sql-helper
+                   (cdr constraints)
+                   (if (db-constraint? constraint)
+                       (cons (translate-constraint-to-sql constraint)
+                             result)
+                       result))))))))
     (translate-constraints-to-sql-helper constraints nil)))
+
+(defun translate-constraint-to-sql (constraint)
+  (let ((name (constraint-name constraint))
+        (value (constraint-value constraint))
+        (temporal? (temporal-constraint? constraint)))
+    (cond
+      ((and temporal? (equal value "undated"))
+       (sql-operation 'is
+                      (sql-expression :attribute name) 'null))
+      ((and temporal? (not (integerp value)))
+       (error 'invalid-img-query-error))      
+      (t (sql-operation '=
+                        (sql-expression :attribute name)
+                        value)))))
 
 (defun translate-get-parameters-to-constraints (params)
   (mapcar #'(lambda (x)
@@ -52,11 +59,12 @@
         (value (cdr constraint)))
     (concatenate
      'string name "="
-     (cond ((or (integerp value) (stringp value)) (write-to-string value))
+     (cond ((integerp value) (write-to-string value))
+           ((stringp value) value)
            (t (error 'invalid-img-query-error))))))
 
 (defun get-query-link-for-constraints (constraints &optional (new-current 1))
-  (setf constraints (remove-constraint "current" constraints))
+  (setf constraints (remove-constraint constraints :name "current"))
   (let ((constraints
          (if (= new-current 1)
              constraints
@@ -75,23 +83,26 @@
             (translate-constraint-to-url-get-parameter constraint))
            finally (return result)))))
 
-(defparameter *non-db-constraints* '("current"))
-(defparameter *db-constraints* '("year" "month" "day"))
-(defparameter *valid-constraints* (union *non-db-constraints* *db-constraints*))
-
-(defun valid-constraint? (x)
-  (and (well-formed-constraint? x)
-       (member (car x) *valid-constraints* :test #'equal)))
-
-(defun db-constraint? (x)
-  (and (well-formed-constraint? x)
-       (member (car x) *db-constraints* :test #'equal)))
-
 (defun well-formed-constraint? (x)
   (and (consp x) (stringp (car x)) (atom (cdr x))))
 
+(defun valid-constraint? (x)
+  (if (and (well-formed-constraint? x)
+           (member (car x) *valid-constraints* :test #'equal))
+      t nil))
+
+(defun db-constraint? (x)
+  (if (and (well-formed-constraint? x)
+           (member (car x) *db-constraints* :test #'equal))
+      t nil))
+
+(defun temporal-constraint? (x)
+  (if (and (well-formed-constraint? x)
+           (member (car x) *temporal-constraints* :test #'equal))
+      t nil))
+
 (defun get-current-constraint-value (constraints)
-  (let ((current-constraint (find-constraint "current" constraints)))
+  (let ((current-constraint (find-constraint constraints :name  "current")))
     (if current-constraint
         (let ((value (cdr current-constraint)))
           (unless (integerp value)
@@ -100,16 +111,35 @@
         1)))
 
 (defun make-constraint (name value)
-  (assert (stringp name))
-  (assert (or (integerp value) (stringp value)))
+  (when (not (stringp name))
+    (error "Invalid name for constraint"))
   (cons name
-        (handler-case (parse-integer value)
-          (parse-error () value))))
+        (cond
+          ((integerp value) value)
+          ((stringp value)
+           (handler-case (parse-integer value)
+             (parse-error () value)))
+          (t (error "Invalid value for constraint")))))
 
-(defun find-constraint (name constraints)
-  (assoc name constraints :test #'equal))
+(defun find-constraint (constraints &key name value)
+  (find-if #'(lambda (x)
+               (and (if (null name) t (equal (constraint-name x) name))
+                      (if (null value) t (equal (constraint-value x) value))))
+           constraints))
 
-(defun remove-constraint (name constraints)
+(defun remove-constraint (constraints &key name value)
   (remove-if #'(lambda (x)
-                 (equal (car x) name))
+                 (and (if (null name) t (equal (constraint-name x) name))
+                      (if (null value) t (equal (constraint-value x) value))))
              constraints))
+
+(defun constraints-equal (constraint1 constraint2)
+  (if (and (equal (constraint-name constraint1) (constraint-name constraint2))
+           (equal (constraint-value constraint2)
+                  (constraint-value constraint2)))
+      t nil))
+
+(defun constraint-name (constraint)
+  (car constraint))
+(defun constraint-value (constraint)
+  (cdr constraint))

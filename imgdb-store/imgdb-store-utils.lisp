@@ -11,14 +11,12 @@
 (defvar *img-resize-cache-conn-spec* '())
 (defvar *img-resize-cache-conn-type* '())
 
-(defmacro select-from-table (table-name select-columns &rest args)
+(defun select-from-table (table-name select-columns &rest args)
   (when (position :from args)
     (error "Invalid keyword argument"))
   (unless (position :database args)
     (error "Missing database connection argument"))
-  `(select ,@select-columns
-           :from ,table-name
-           ,@args))
+  (apply #'select `(,@select-columns :from ,table-name ,@args)))
 
 (defun get-thread-id (&optional (thread *current-process*))
   (register-groups-bind (tid)

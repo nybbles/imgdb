@@ -130,11 +130,11 @@
                     :database dbconn)
     (delete-file img-url)))
 
-(defmacro select-img-records (select-columns &rest args)
-  `(select-from-table *img-table-name* ,select-columns ,@args))
+(defun select-img-records (select-columns &rest args)
+  (apply #'select-from-table *img-table-name* select-columns args))
 
 (defun img-record-exists (img-digest dbconn)
-  (> (caar (select [count [digest]] 
+  (> (caar (select [count [digest]]
                    :from *img-table-name*
                    :where [= [digest] img-digest]
                    :database dbconn))

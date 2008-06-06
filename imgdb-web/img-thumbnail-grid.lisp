@@ -60,13 +60,13 @@
 
 (defun get-range-for-constraints (where-clause database)
   (list 1
-        (caar (select-img-records ([count [digest]])
+        (caar (select-img-records (list [count [digest]])
                                   :where where-clause
                                   :database database))))
 
 (defun get-img-ids (current num-img-ids where-clause database)
   (let ((offset (- (* num-img-ids (floor current num-img-ids)) 1)))
-    (select-img-records ([digest])
+    (select-img-records (list [digest])
                         :where where-clause
                         :order-by '(([year] :desc)
                                     ([month] :desc)

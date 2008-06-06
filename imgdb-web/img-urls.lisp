@@ -160,7 +160,7 @@
   (list (floor (* width (/ new-height height))) new-height))
 
 (defun get-img-store-url-and-size-from-img-id (img-id dbconn)
-  (car (select-img-records ([url] [width] [height])
+  (car (select-img-records (list [url] [width] [height])
                            :where [= [digest] img-id]
                            :database dbconn)))
 

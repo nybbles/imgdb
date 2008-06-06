@@ -46,18 +46,18 @@
          (release-resize-cache-entry ,img-id (list ,size ,size)
                                      t ,dbconn-name)))))
 
-(defmacro select-resize-cache-entries (select-columns &rest args)
-  `(select-from-table *img-resize-cache-table* ,select-columns ,@args))
+(defun select-resize-cache-entries (select-columns &rest args)
+  (apply #'select-from-table *img-resize-cache-table* select-columns args))
 
 (defun get-original-image-url (img-id dbconn)
   (car
-   (select-img-records ([url])
+   (select-img-records (list [url])
                        :where [= [digest] img-id]
                        :flatp t :database dbconn)))
 
 (defun get-resize-cache-image-url (img-id dimensions thumbnail dbconn)
   (car (select-resize-cache-entries
-        ([url])
+        (list [url])
         :where [and [= [originalimgid] img-id]
                     [= [width] (first dimensions)]
                     [= [height] (second dimensions)]
@@ -109,7 +109,7 @@
 
 (defun get-resize-cache-entry-validity (img-id dimensions thumbnail dbconn)
   (let ((result (select-resize-cache-entries
-                 ([valid])
+                 (list [valid])
                  :where [and [= [originalimgid] img-id]
                              [= [width] (first dimensions)]
                              [= [height] (second dimensions)]
@@ -195,7 +195,7 @@
 (defun resize-cache-entry-valid? (img-id dimensions thumbnail dbconn)
   (let ((result
          (select-resize-cache-entries
-          ([valid])
+          (list [valid])
           :where
           [and [= [originalimgid] img-id]
                [= [width] (first dimensions)]
@@ -211,7 +211,7 @@
 (defun get-total-resize-cache-file-size (dbconn)
   (caar
    (select-resize-cache-entries
-    ([sum [filesize]]) :database dbconn)))
+    (list [sum [filesize]]) :database dbconn)))
 
 (defun create-resize-cache-tables (dbconn)
   (create-table *img-resize-cache-table*
@@ -245,7 +245,7 @@
 
 (defun create-resized-image (img-id dimensions thumbnail dbconn)
   (let ((img-store-url
-         (car (select-img-records ([url])
+         (car (select-img-records (list [url])
                                   :where [= [digest] img-id]
                                   :flatp t
                                   :database dbconn)))

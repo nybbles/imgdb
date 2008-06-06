@@ -2,25 +2,92 @@
 
 (locally-enable-sql-reader-syntax)
 
-(defun generate-date-cloud (constraints))
+(defun generate-date-cloud (constraints dbconn)
+  (with-html-output-to-string (output nil)
+    (:h3 :align "center" "Pictures by:")
+    (:h4 :align "left" "year")
+    (:p :align "left"
+        :class "date-cloud-year"
+        (str
+         (generate-tag-cloud
+          (get-tags "year" constraints :database dbconn))))
+    (:h4 :align "left" "month")
+    (:p :align "left"
+        :class "date-cloud-month"
+        (str
+         (generate-tag-cloud
+          (get-tags "month" constraints :database dbconn :order :asc))))
+    (:h4 :align "left" "day")
+    (:p :align "left"
+        :class "date-cloud-day"
+        (str
+         (generate-tag-cloud
+          (get-tags "day" constraints :database dbconn))))))
 
-(defun convert-num-imgs-by-year-results-to-tag-list (query-results)
-  (mapcar
-   #'(lambda (x)
-       (let* ((year (first x))
-              (year-str (if (null year) "undated" (write-to-string year)))
-              (link (get-date-cloud-tag-link year-str))
-              (quantity (second x)))
-         (list year-str link quantity)))
-   query-results))
+(defun get-friendly-tag-value (tag tag-value)
+  (cond
+    ((equal tag "month")
+     (ccase tag-value
+       (1 "Jan")
+        (2 "Feb")
+        (3 "Mar")
+        (4 "Apr")
+        (5 "May")
+        (6 "Jun")
+        (7 "Jul")
+        (8 "Aug")
+        (9 "Sep")
+        (10 "Oct")
+        (11 "Nov")
+        (12 "Dec")
+        ("undated" "undated")))
+    ((and nil (equal tag "day")) ;; disabled for now
+     (if (integerp tag-value)
+         (format nil "~D<sup>~A</sup>"
+                 tag-value
+                 (case (rem tag-value 10)
+                   (1 "st")
+                   (2 "nd")
+                   (3 "rd")
+                   (t "th")))
+         tag-value))
+    (t tag-value)))
 
-(defun get-date-cloud-tag-link (tag-name)
-  (get-query-link-for-constraints (list (make-constraint "year" tag-name))))
+(defun get-tags (tag constraints &key database (order :desc))
+  (let ((pruned-constraints (remove-constraint constraints :name tag)))
+    (mapcar
+     #'(lambda (x)
+         (let* ((tag-value (if (null (first x)) "undated" (first x)))
+                (friendly-tag-value (get-friendly-tag-value tag tag-value))
+                (tag-quantity (second x))
+                (tag-is-active (find-constraint constraints
+                                                :name tag :value tag-value))
+                (tag-link
+                 (get-query-link-for-constraints
+                  (if tag-is-active
+                      pruned-constraints
+                      (cons (make-constraint tag tag-value)
+                            pruned-constraints)))))
+           (list friendly-tag-value tag-link tag-quantity tag-is-active)))
+     (select-num-imgs-for-tag-type tag
+                                   pruned-constraints
+                                   :database database :order order))))
 
-(defun select-num-imgs-by-year (dbconn)
-  (select-img-records ([year] [count [*]])
-                      :group-by [year]
-                      :order-by '(([year] :desc))
-                      :database dbconn))
+(defun select-num-imgs-for-tag-type
+    (tag-type constraints &key database (order :desc))
+  (let* ((tag-type-column (sql-expression
+                           :attribute (intern (string-upcase tag-type))))
+         (select-columns (list tag-type-column [count [*]]))
+         (where-clause (translate-constraints-to-sql constraints))
+         (order-by-clause (list (list tag-type-column order)))
+         (result (select-img-records select-columns
+                                     :where where-clause
+                                     :group-by tag-type-column
+                                     :order-by order-by-clause
+                                     :database database))
+         (last-tag (car (last result))))
+    (if (and (eq order :asc) (null (car last-tag)))
+        (push last-tag (subseq result 0 (- (length result) 1)))
+        result)))
 
 (restore-sql-reader-syntax-state)

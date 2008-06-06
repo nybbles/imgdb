@@ -30,8 +30,5 @@
                      (create-links-for-query-resultset
                       constraints current 40 dbconn)))
               (:div :id "date-cloud"
-                    (:h3 :align "center" "Pictures by year")
-                    (str (generate-tag-cloud
-                          (convert-num-imgs-by-year-results-to-tag-list
-                           (select-num-imgs-by-year dbconn))))))))))
+                    (str (generate-date-cloud constraints dbconn))))))))
     (invalid-img-query-error () (not-found-page))))
