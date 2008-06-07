@@ -4,7 +4,8 @@
                :cl-imgmagick :ffi-utils)
   :components ((:file "packages")
                (:file "imgdb-store-utils" :depends-on ("packages"))
-               (:file "imgdb-store" :depends-on ("imgdb-store-utils"))
+               (:file "imgdb-store" :depends-on
+                      ("imgdb-store-utils" "img-resize-cache"))
                (:file "img-resize-cache-postgresql"
                       :depends-on ("imgdb-store-utils"))
                (:file "img-resize-cache-sqlite"

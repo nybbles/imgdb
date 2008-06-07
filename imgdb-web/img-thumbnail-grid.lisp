@@ -109,7 +109,7 @@
     (current range power &optional (base 10) (max-num-intervals base))
   (assert (evenp base))
   (let* ((num-side-intervals (- (/ max-num-intervals 2) 1))
-         (interval-size (expt base power))
+         (interval-size (* base (expt max-num-intervals (- power 1))))
          (initial-interval (get-initial-interval current interval-size))
          (rhs (min (second range)
                    (+ (second initial-interval)

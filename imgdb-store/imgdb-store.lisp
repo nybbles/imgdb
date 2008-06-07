@@ -91,10 +91,13 @@
         (invoke-restart restart)
         (error 'control-error))))
 
+(defparameter *default-thumbnail-size* 100)
+
 (defun index-img (img-url img-store dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
-  (let ((img-digest (byte-array-to-hex-string (digest-file :sha1 img-url))))
+  (let ((img-digest (byte-array-to-hex-string (digest-file :sha1 img-url)))
+        (img-inserted nil))
     (unless (img-record-exists img-digest dbconn)
       (with-magick-wand (wand)
         (magick-ping-image wand (namestring img-url))
@@ -125,10 +128,14 @@
                                       img-width img-height
                                       img-year img-month img-day)
                                 :database dbconn)
-                t)
+                (setf img-inserted t))
             (skip-img-record-creation ()
-              (delete-file img-store-url)
-              nil)))))))
+              (unless (equal img-url img-store-url)
+                (delete-file img-store-url)))))))
+    (when img-inserted
+      ;; Create thumbnail.
+      (with-thumbnail (in img-digest *default-thumbnail-size*)))
+    img-inserted))
 
 (defun remove-img-record (img-url dbconn)
   "Removes the record indexed by id from the database"
