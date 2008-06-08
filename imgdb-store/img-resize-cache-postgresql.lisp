@@ -12,7 +12,7 @@
 (defun lock-cache-entry-for-read-postgresql (img-id dimensions thumbnail dbconn)
   (car (query (format nil *lock-cache-entry-for-read-postgresql-query*
                       img-id (first dimensions) (second dimensions)
-                      (if thumbnail "TRUE" "FALSE"))
+                      (if thumbnail t "f"))
               :database dbconn)))
 
 (defparameter *lock-cache-entry-for-write-postgresql-query*
@@ -26,7 +26,7 @@
     (img-id dimensions thumbnail dbconn)
   (car (query (format nil *lock-cache-entry-for-read-postgresql-query*
                       img-id (first dimensions) (second dimensions)
-                      (if thumbnail "TRUE" "FALSE"))
+                      (if thumbnail t "f"))
               :database dbconn)))
 
 (defun lock-cache-table-for-write-postgresql (dbconn)

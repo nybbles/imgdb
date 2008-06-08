@@ -14,12 +14,14 @@
             (:html
              (str (generate-html-head "imgdb"))
              (:body
+              (:h1 :align "center" "imgdb")
               (:div :id "signin"
                     (:a :href "login.htm" "Sign in"))
               (:br)
               (:br)
+              (:div :id "date-cloud"
+                    (str (generate-date-cloud constraints dbconn)))
               (:div :id "front-content"
-                    (:h1 :align "center" "imgdb")
                     (str
                      (create-thumbnail-grid
                       (get-img-ids current 40
@@ -28,7 +30,5 @@
                     (:br)
                     (str
                      (create-links-for-query-resultset
-                      constraints current 40 dbconn)))
-              (:div :id "date-cloud"
-                    (str (generate-date-cloud constraints dbconn))))))))
+                      constraints current 40 dbconn))))))))
     (invalid-img-query-error () (not-found-page))))

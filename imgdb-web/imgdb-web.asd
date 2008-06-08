@@ -17,6 +17,8 @@
    (:file "imgdb-web-server" :depends-on ("imgdb-web-setup"))
    (:file "img-query" :depends-on
           ("xhtml-gen-utils" "date-cloud" "img-query-constraint"))
+   (:file "img-view" :depends-on
+          ("xhtml-gen-utils" "tag-cloud" "img-urls"))
    (:file "dispatchers-setup"
           :depends-on
           ("imgdb-web-css" "not-found-page" "img-urls" "welcome-page"))))

@@ -37,6 +37,20 @@ div#date-cloud
     text-align: center;
 }
 
+#img-view-image
+{
+    float: left;
+    left: 30px;
+    top: 80px;
+}
+
+#img-view-image-info
+{
+    float: right;
+    right: 30px;
+    top: 80px;
+}
+
 div#date-cloud .date-cloud-year
 {
 }

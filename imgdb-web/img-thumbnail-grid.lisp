@@ -31,7 +31,7 @@
         for i from 1 to row-length
         do
         (let ((thumbnail-url (format nil "img-urls/thumbnails/~A" img-id))
-              (img-url (format nil "img-urls/~A" img-id)))
+              (img-url (format nil "img-view?id=~A" img-id)))
           (htm (:td
                 (:a :class "thumbnail" :href img-url
                     (:img :src thumbnail-url)))))))))

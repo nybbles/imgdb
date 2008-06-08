@@ -127,7 +127,7 @@
                   :where [and [= [originalimgid] img-id]
                               [= [width] (first dimensions)]
                               [= [height] (second dimensions)]
-                              [= [thumbnail] thumbnail]]
+                              [= [thumbnail] (if thumbnail t "f")]]
                   :database dbconn))
 
 (defun set-resize-cache-entry-filesize
@@ -138,7 +138,7 @@
                   :where [and [= [originalimgid] img-id]
                               [= [width] (first dimensions)]
                               [= [height] (second dimensions)]
-                              [= [thumbnail] thumbnail]]
+                              [= [thumbnail] (if thumbnail t "f")]]
                   :database dbconn))
 
 (defun add-resize-cache-entry-hold (img-id dimensions thumbnail dbconn)
@@ -155,7 +155,7 @@
                   :where [and [= [originalimgid] img-id]
                               [= [width] (first dimensions)]
                               [= [height] (second dimensions)]
-                              [= [thumbnail] thumbnail]
+                              [= [thumbnail] (if thumbnail t "f")]
                               [= [threadid] (get-thread-id)]]
                   :database dbconn))
 
@@ -200,7 +200,7 @@
           [and [= [originalimgid] img-id]
                [= [width] (first dimensions)]
                [= [height] (second dimensions)]
-               [= [thumbnail] thumbnail]]
+               [= [thumbnail] (if thumbnail t "f")]]
           :flatp t
           :database dbconn)))
     (assert (= (length result) 1))

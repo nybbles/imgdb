@@ -26,39 +26,19 @@
 
 (defun get-friendly-tag-value (tag tag-value)
   (cond
+    ((equal tag "year")
+     (translate-year-to-year-str tag-value))
     ((equal tag "month")
-     (ccase tag-value
-       (1 "Jan")
-        (2 "Feb")
-        (3 "Mar")
-        (4 "Apr")
-        (5 "May")
-        (6 "Jun")
-        (7 "Jul")
-        (8 "Aug")
-        (9 "Sep")
-        (10 "Oct")
-        (11 "Nov")
-        (12 "Dec")
-        ("undated" "undated")))
-    ((and nil (equal tag "day")) ;; disabled for now
-     (if (integerp tag-value)
-         (format nil "~D<sup>~A</sup>"
-                 tag-value
-                 (case (rem tag-value 10)
-                   (1 "st")
-                   (2 "nd")
-                   (3 "rd")
-                   (t "th")))
-         tag-value))
-    (t tag-value)))
+     (translate-month-to-month-str tag-value))
+    ((equal tag "day")
+     (translate-day-to-day-str tag-value))))
 
 (defun get-tags (tag constraints &key database (order :desc))
   (let ((pruned-constraints (remove-constraint constraints :name tag)))
     (mapcar
      #'(lambda (x)
          (let* ((tag-value (if (null (first x)) "undated" (first x)))
-                (friendly-tag-value (get-friendly-tag-value tag tag-value))
+                (friendly-tag-value (get-friendly-tag-value tag (first x)))
                 (tag-quantity (second x))
                 (tag-is-active (find-constraint constraints
                                                 :name tag :value tag-value))
