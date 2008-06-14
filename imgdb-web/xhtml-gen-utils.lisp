@@ -1,14 +1,47 @@
 (in-package :imgdb-web)
 
-(defun generate-html-head (title &rest rest)
-  (apply 
-   #'concatenate 'string
-   (with-html-output-to-string (output nil)
-     (:head
-      (:link :rel "stylesheet" :type "text/css"
-             :href "css/imgdb-web.css")
-      (:title (str title))))
-   rest))
+(setf *attribute-quote-char* #\")
+
+(defun generate-html-head (title &key (js-impl nil) (js-extras nil))
+  (with-html-output-to-string (output nil)
+    (:head
+     (:link :rel "stylesheet" :type "text/css"
+            :href "css/imgdb-web.css")
+     (:title (str title))
+     (str (generate-js-include js-impl js-extras)))))
+
+(defun generate-js-include (js-impl js-extras)
+  (if js-impl
+      (ccase js-impl
+        (:dojo (generate-js-include-dojo js-extras)))
+      ""))
+
+(defun generate-js-include-dojo (js-extras)
+  (let ((require-str
+         (apply #'concatenate 'string
+                (mapcar #'(lambda (x)
+                            (concatenate 'string "dojo.require(\"" x "\");"))
+                        js-extras))))
+    (with-html-output-to-string (output nil)
+      (:style
+       :type "text/css"
+       (str
+        (concatenate
+         'string
+         "@import "
+         "'/js/dojo/dojo-1.1.1/dijit/themes/tundra/tundra.css'; "
+         "@import "
+         "'/js/dojo/dojo-1.1.1/dojo/resources/dojo.css'")))
+      (:script :type "text/javascript"
+               :src "/js/dojo/dojo-1.1.1/dojo/dojo.js"
+               :djConfig "parseOnLoad: true")
+      (:script :type "text/javascript"
+               (str require-str)))))
+
+(defun include-js-file (js-filename)
+  (with-html-output-to-string (output nil :prologue nil)
+    (:script :type "text/javascript"
+             :src js-filename)))
 
 (defun translate-date-to-date-str (date &key (type :short))
   (assert (or (eq type :short) (eq type :long)))

@@ -6,7 +6,6 @@
   ((:file "packages")
    (:file "imgdb-web-setup" :depends-on ("packages"))
    (:file "xhtml-gen-utils" :depends-on ("imgdb-web-setup"))
-   (:file "imgdb-web-css" :depends-on ("imgdb-web-setup"))
    (:file "img-urls" :depends-on ("imgdb-web-setup" "not-found-page"))
    (:file "not-found-page" :depends-on ("xhtml-gen-utils"))
    (:file "welcome-page" :depends-on ("xhtml-gen-utils" "date-cloud"))
@@ -20,5 +19,4 @@
    (:file "img-view" :depends-on
           ("xhtml-gen-utils" "tag-cloud" "img-urls"))
    (:file "dispatchers-setup"
-          :depends-on
-          ("imgdb-web-css" "not-found-page" "img-urls" "welcome-page"))))
+          :depends-on ("not-found-page" "img-urls" "welcome-page"))))
