@@ -19,21 +19,24 @@
     (with-database (dbconn *imgdb-store-db-conn-spec*
                            :database-type *imgdb-store-db-type*
                            :pool t :if-exists :old)
-      (let ((date (select-img-date img-id dbconn)))
+      (let ((date (select-img-date img-id dbconn))
+            (title (format nil "imgdb - ~A" img-id)))
         (with-html-output-to-string (output nil :prologue t)
           (:html
-           (str (generate-html-head (format nil "imgdb - ~A" img-id)
-                                    :js-impl :dojo
-                                    :js-extras
-                                    '("dojo.parser"
-                                      "dijit.InlineEditBox"
-                                      "dijit.form.DateTextBox"
-                                      "dijit.form.TextBox"
-                                      "dijit.form.Textarea")))         
+           (str
+            (generate-html-head
+             title
+             :js-impl :dojo
+             :js-extras
+             '((:dojo-require
+                "dojo.parser" "dijit.InlineEditBox" "dijit.form.DateTextBox"
+                "dijit.form.TextBox" "dijit.form.Textarea")
+               (:js-include
+                "/js/utils.js" "/js/imgdb-web.js")
+               (:dojo-require "imgdb-web.widget.TagEntryDisplayBox"))))
            (:body
             :class "tundra"
             :onload (img-view-page-js-init "image-date" date)
-            (str (include-js-file "/js/utils.js"))
             (:h1 :align "center" "imgdb")
             (:div
              :id "img-view-image"
@@ -59,12 +62,15 @@
               :width "200px"
               :dojoType "dijit.InlineEditBox"
               :editor "dijit.form.DateTextBox"
+              :noValueIndicator "undated"
               :editorParams
               "{constraints: {formatLength:'long'}}")
              (:br)
              (:br)
              (:br)
-             (:h4 "Tags: ")))))))))
+             (:h4 "Tags:")
+             (:span
+              :dojoType "imgdb-web.widget.TagEntryDisplayBox")))))))))
             
 (defun select-img-date (img-id dbconn)
   (let ((result

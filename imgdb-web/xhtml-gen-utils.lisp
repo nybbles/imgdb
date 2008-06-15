@@ -17,31 +17,44 @@
       ""))
 
 (defun generate-js-include-dojo (js-extras)
-  (let ((require-str
-         (apply #'concatenate 'string
-                (mapcar #'(lambda (x)
-                            (concatenate 'string "dojo.require(\"" x "\");"))
-                        js-extras))))
-    (with-html-output-to-string (output nil)
-      (:style
-       :type "text/css"
+  (push '(:css-import
+          "/js/dojo/dojo-1.1.1/dijit/themes/tundra/tundra.css")
+        js-extras)
+  (with-html-output-to-string (output nil)
+    (:script :type "text/javascript"
+             :src "/js/dojo/dojo-1.1.1/dojo/dojo.js"
+             :djConfig "parseOnLoad: true")
+    (loop for thing in js-extras
+       do
        (str
-        (concatenate
-         'string
-         "@import "
-         "'/js/dojo/dojo-1.1.1/dijit/themes/tundra/tundra.css'; "
-         "@import "
-         "'/js/dojo/dojo-1.1.1/dojo/resources/dojo.css'")))
-      (:script :type "text/javascript"
-               :src "/js/dojo/dojo-1.1.1/dojo/dojo.js"
-               :djConfig "parseOnLoad: true")
-      (:script :type "text/javascript"
-               (str require-str)))))
+        (cond
+          ((eq (car thing) :dojo-require)
+           (require-dojo-modules (cdr thing)))
+          ((eq (car thing) :js-include)
+           (include-js-files (cdr thing)))
+          ((eq (car thing) :css-import)
+           (import-css-files (cdr thing))))))))
 
-(defun include-js-file (js-filename)
+(defun require-dojo-modules (dojo-modules)
   (with-html-output-to-string (output nil :prologue nil)
     (:script :type "text/javascript"
-             :src js-filename)))
+             (loop for module in dojo-modules
+                do
+                (str (concatenate 'string "dojo.require(\"" module "\");"))))))
+
+(defun include-js-files (js-files)
+  (with-html-output-to-string (output nil :prologue nil)
+    (loop for file in js-files
+         do
+         (htm (:script :type "text/javascript"
+                       :src file)))))
+
+(defun import-css-files (css-files)
+  (with-html-output-to-string (output nil :prologue nil)
+    (:style :type "text/css"
+             (loop for file in css-files
+                do
+                (str (concatenate 'string "@import '" file "';"))))))
 
 (defun translate-date-to-date-str (date &key (type :short))
   (assert (or (eq type :short) (eq type :long)))
