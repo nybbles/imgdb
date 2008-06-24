@@ -13,13 +13,14 @@ dojo.declare
                                   "templates/TagEntryDisplayBox.htm"),
      templateString: "",
      widgetsInTemplate: true,
-     tagset: ["car", "audi", "flower", "macro"],
+     initialtagset: ["car", "audi", "flower", "macro"],
+     tagset: [],
      postCreate: function()
      {
        this.tagentrybox.displayNode.style.color = "#777777";
 
        dojo.forEach
-         (this.tagset,
+         (this.initialtagset,
           function(tag)
           {
             this._addTag(tag);
@@ -42,9 +43,71 @@ dojo.declare
      },
      _addTag: function(tag)
      {
-       var newTag = document.createElement("li");
-       newTag.innerHTML = tag;
-       this.taglist.insertBefore(newTag, this.taglist.firstChild);
+       if (!this._doesTagExist(tag))
+       {
+         var newTagDiv = document.createElement("div");
+         newTagDiv.className = "tag";
+         newTagDiv.tag = tag;
+
+         var newTag = document.createElement("a");
+         newTag.className = "tagname";
+         newTag.innerHTML = tag;
+
+         var newTagDelete = document.createElement("a");
+         newTagDelete.className = "tagdelete";
+         newTagDelete.innerHTML = "[x]";
+         newTagDelete.tag = tag;
+         dojo.connect(newTagDelete, 'onclick', this, "_deleteTagEventHandler");
+        
+         newTagDiv.appendChild(newTag);
+         newTagDiv.appendChild(newTagDelete);
+
+         this.taglist.insertBefore(newTagDiv, this.taglist.firstChild);
+         this.tagset[this.tagset.length] = tag;
+       }
+     },
+     _deleteTagEventHandler: function(event)
+     {
+       this._deleteTag(event.target.tag);
+     },
+     _deleteTag: function(tag)
+     {
+       var i = 0;
+       var tagFound = 0;
+
+       for (i = 0; i < this.tagset.length; ++i)
+       {
+         if (tag === this.tagset[i])
+         {
+           tagFound = 1;
+           break;
+         }
+       }
+
+       if (tagFound)
+       {
+         this.tagset.splice(i, 1);
+       }
+
+       for (i = 0; i < this.taglist.childNodes.length; ++i)
+       {
+         if (this.taglist.childNodes[i].tag === tag)
+         {
+           this.taglist.removeChild(this.taglist.childNodes[i]);
+         }
+       }
+     },
+     _doesTagExist: function(tag)
+     {
+       for (i = 0; i < this.tagset.length; ++i)
+       {
+         if (tag === this.tagset[i])
+         {
+           return 1;
+         }
+       }
+
+       return 0;
      }
  }
 );

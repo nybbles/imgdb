@@ -42,8 +42,8 @@ div#img-view-image
     float: left;
     margin-top: 2%;
     margin-bottom: 2%;
-    margin-right: 10%;
-    margin-left: 10%;
+    margin-right: 5%;
+    margin-left: 5%;
 }
 
 div#img-view-image-info
@@ -51,10 +51,23 @@ div#img-view-image-info
     float: right;
     margin-top: 2%;
     margin-bottom: 2%;
-    margin-right: 10%;
-    margin-left: 10%;
+    margin-right: 5%;
+    margin-left: 5%;
     width: 30%;
     text-align: left;
+}
+
+a.tagdelete
+{
+    font-size: 75%;
+    margin-left: 5px;
+}
+
+a.tagdelete:hover
+{
+    border: solid 1px #ffff00;
+    color: #ff0000;
+    cursor: pointer;
 }
 
 div#date-cloud .date-cloud-year
