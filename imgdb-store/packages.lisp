@@ -12,4 +12,5 @@
            :restore-sql-reader-syntax-state
            :sql-operation :sql-expression
            :with-database
-           :with-thumbnail :with-resized-image))
+           :with-thumbnail :with-resized-image
+           :get-img-tags :add-img-tags :delete-img-tags))

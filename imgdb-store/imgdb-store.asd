@@ -13,4 +13,6 @@
                (:file "img-resize-cache"
                       :depends-on ("imgdb-store-utils"
                                    "img-resize-cache-postgresql"
-                                   "img-resize-cache-sqlite"))))
+                                   "img-resize-cache-sqlite"))
+               (:file "imgdb-tags"
+                      :depends-on ("imgdb-store-utils"))))

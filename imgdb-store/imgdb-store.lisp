@@ -4,7 +4,6 @@
 
 (defparameter *img-types* '("jpeg" "jpg"))
 (defparameter *default-dbconn-spec* '())
-(defparameter *img-table-name* '[imgs])
 
 (defun index-img-drop (img-drop img-store db-conn-spec db-type)
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
@@ -117,7 +116,7 @@
                (img-height (image-height wand)))
           (restart-case
               (progn
-                (insert-records :into *img-table-name*
+                (insert-records :into *img-table*
                                 :attributes
                                 '([digest] [urldigest] [url]
                                   [width] [height]
@@ -142,24 +141,24 @@
   (let ((img-urldigest (byte-array-to-hex-string
                         (digest-sequence
                          :sha1 (ascii-string-to-byte-array img-url)))))
-    (delete-records :from *img-table-name*
+    (delete-records :from *img-table*
                     :where [= [urldigest] img-urldigest]
                     :database dbconn)
     (delete-file img-url)))
 
 (defun select-img-records (select-columns &rest args)
-  (apply #'select-from-table *img-table-name* select-columns args))
+  (apply #'select-from-table *img-table* select-columns args))
 
 (defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]]
-                   :from *img-table-name*
+                   :from *img-table*
                    :where [= [digest] img-digest]
                    :database dbconn))
      0))
 
 (defun count-img-records (dbconn)
   (caar (select [count [*]]
-                :from *img-table-name*
+                :from *img-table*
                 :database dbconn)))
 
 (defun create-imgdb-dbconn (dbconn-spec db-type)
@@ -176,7 +175,7 @@
   (probe-database dbconn :database-type db-type))
 
 (defun create-img-table (dbconn)
-  (create-table *img-table-name*
+  (create-table *img-table*
                 '(([digest] (vector char 40) :not-null :unique :primary-key)
                   ([urldigest] (vector char 40) :not-null)
                   ([url] string :not-null :unique)
@@ -187,9 +186,9 @@
                   ([day] integer))
                 :database dbconn))
 (defun drop-img-table (dbconn)
-  (drop-table *img-table-name* :database dbconn))
+  (drop-table *img-table* :database dbconn))
 (defun img-table-exists (dbconn)
-  (table-exists-p *img-table-name* :database dbconn))
+  (table-exists-p *img-table* :database dbconn))
 
 ;;; Stubs
 '(defun get-image (img-id dbconn))

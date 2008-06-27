@@ -2,8 +2,10 @@
 
 (locally-enable-sql-reader-syntax)
 
+(defparameter *img-table* '[imgs])
 (defparameter *img-resize-cache-table* '[imgresizecache])
 (defparameter *img-resize-cache-holds-table* '[imgresizecacheholds])
+(defparameter *img-tags-table* '[imgtags])
 
 (defparameter *img-resize-cache-max-size* (* 2 (expt 1024 3))) ; 2GB
 (defvar *img-resize-cache-store* nil)
