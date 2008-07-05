@@ -23,25 +23,46 @@ dojo.declare
          (this.initialtagset,
           function(tag)
           {
-            this._addTag(tag);
+            this._addTagDOMNode(tag);
           },
           this);
      },
-     _updateTagList: function(value)
+     _addTagsEventHandler: function(value)
      {
-       var tagList = value.split(/\s+/);
-       
-       dojo.forEach
-         (tagList.reverse(),
-          function(tag)
-          {
-            this._addTag(tag);
-          },
-          this);
-       
-       this.tagentrybox.setValue("");
+       var taglist = value.split(/\s+/).reverse();
+       this._addTags(taglist);
      },
-     _addTag: function(tag)
+     _addTags: function(taglist)
+     {
+       var tagdata = {imgid : taglist};
+       var widget = this;
+       dojo.rawXhrPost({
+             url: "/add-img-tags",
+             handleAs: "json-comment-filtered",
+             postData: dojo.toJson(tagdata),
+             timeout: 1000,
+             load: function(response, ioargs)
+             {
+               // This code does not handle the case where tags have
+               // since been deleted.
+               dojo.forEach
+                 // (response.imgid,
+                 (response.tags,
+                  function(tag)
+                  {
+                    widget._addTagDOMNode(tag);
+                  },
+                  this);
+               
+               widget.tagentrybox.setValue("");
+             },
+             error: function(response, ioargs)
+             {
+               alert(ioargs.xhr.status + ": " + response);
+             }
+       });
+     },
+     _addTagDOMNode: function(tag)
      {
        if (!this._doesTagExist(tag))
        {

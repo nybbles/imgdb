@@ -70,7 +70,8 @@
              (:br)
              (:h4 "Tags:")
              (:span
-              :dojoType "imgdb-web.widget.TagEntryDisplayBox")))))))))
+              :dojoType "imgdb-web.widget.TagEntryDisplayBox"
+              :imgid img-id)))))))))
             
 (defun select-img-date (img-id dbconn)
   (let ((result

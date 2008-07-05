@@ -18,5 +18,6 @@
           ("xhtml-gen-utils" "date-cloud" "img-query-constraint"))
    (:file "img-view" :depends-on
           ("xhtml-gen-utils" "tag-cloud" "img-urls"))
+   (:file "img-tags" :depends-on ("packages"))
    (:file "dispatchers-setup"
           :depends-on ("not-found-page" "img-urls" "welcome-page"))))
