@@ -18,18 +18,27 @@
   (concatenate 'string
                "^\\s*\\\"(([^\\\"\\\\]|"
                *json-control-char-regex*
-               ")*)\\\"\\s*$"))
+               ")*)\\\"\\s*"))
 (defparameter *json-number-regex*
-  "^\\s*(-?(0\\.[0-9]+|[1-9][0-9]*(\\.[0-9]+)?)([eE][+-]?[0-9]+)?)\\s*$")
+  "^\\s*(-?(0\\.[0-9]+|[1-9][0-9]*(\\.[0-9]+)?)([eE][+-]?[0-9]+)?)\\s*")
+(defparameter *json-bool-regex* "^\\s*(true|false)\\s*")
+(defparameter *json-null-regex* "^\\s*(null)\\s*")
 
 (defun from-json (json-str &optional (result nil)))
 
 (defun string-from-json (json-str &key (convert-control-chars nil))
-  (register-groups-bind (json-str)
-      (*json-string-regex* json-str)
-    (if convert-control-chars
-        (convert-json-control-chars-in-string-to-lisp json-str)
-        json-str)))
+  (multiple-value-bind (match-start match-end reg-starts reg-ends)
+      (scan *json-string-regex* json-str)
+    (if (and match-start match-end reg-starts reg-ends)
+        (let ((found-json-str
+               (subseq json-str (aref reg-starts 0) (aref reg-ends 0)))
+              (unmatched-json-str (subseq json-str match-end)))
+          (values
+           (if convert-control-chars
+               (convert-json-control-chars-in-string-to-lisp found-json-str)
+               found-json-str)
+           unmatched-json-str))
+        (values nil json-str))))
 
 (defun convert-json-control-chars-in-string-to-lisp (str)
   (let ((result (make-array 0 :element-type 'character :fill-pointer t)))
@@ -75,9 +84,34 @@
        hex-char))))
 
 (defun number-from-json (json-str)
-  (register-groups-bind (json-num)
-      (*json-number-regex* json-str)
-    (assert (not (null json-num)))
-    (let ((lisp-num
-           (unless (null json-num) (read-from-string json-num))))
-      (if (numberp lisp-num) lisp-num nil))))
+  (multiple-value-bind (match-start match-end reg-starts reg-ends)
+      (scan *json-number-regex* json-str)
+    (if (and match-start match-end reg-starts reg-ends)
+        (let ((json-num
+               (subseq json-str (aref reg-starts 0) (aref reg-ends 0)))
+              (unmatched-json-str (subseq json-str match-end)))
+          (let ((lisp-num (read-from-string json-num)))
+            (values lisp-num unmatched-json-str)))
+        (values nil json-str))))
+
+(defun bool-from-json (json-str)
+  (multiple-value-bind (match-start match-end reg-starts reg-ends)
+      (scan *json-bool-regex* json-str)
+    (if (and match-start match-end reg-starts reg-ends)        
+        (let ((json-bool
+               (subseq json-str (aref reg-starts 0) (aref reg-ends 0)))
+              (unmatched-json-str (subseq json-str match-end)))
+          (values
+           (cond
+             ((equal json-bool "true") :true)
+             ((equal json-bool "false") :false)
+             (t (error 'invalid-bool-value)))
+           unmatched-json-str))
+        (values nil json-str))))
+
+(defun null-from-json (json-str)
+  (multiple-value-bind (match-start match-end reg-starts reg-ends)
+      (scan *json-null-regex* json-str)
+    (if (and match-start match-end reg-starts reg-ends)
+        (values :null (subseq json-str match-end))
+        (values nil json-str))))
