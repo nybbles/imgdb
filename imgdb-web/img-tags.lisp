@@ -35,7 +35,7 @@
            with result = '()
            for i from 0 to 9
            do (multiple-value-bind (status token rest-str)
-                  (array-element-json curr-json-str)
+                  (next-element-from-json curr-json-str "]")
                 (setf curr-json-str rest-str)
                 (ecase status
                   (:empty (return (values '(:array) curr-json-str)))
@@ -47,39 +47,45 @@
                                    curr-json-str))))))
         (values nil json-str))))
 
-(defun array-element-json (json-str)
+(defun next-element-from-json (json-str end-delimiter)
   (let ((token-info
+         ;; find the token and its type and return them as token info:
+         ;; (LIST token unprocessed-str).
          (dolist (token-type '(:array :string :number :bool :null))
-           (let ((returned-token-info 'nil))
-             (setf returned-token-info
-                   (multiple-value-list
-                    (case token-type
-                      (:array (array-from-json json-str))
-                      (:string (string-from-json json-str))
-                      (:number (number-from-json json-str))
-                      (:bool (bool-from-json json-str))
-                      (:null (null-from-json json-str)))))
+           (let
+               ((returned-token-info
+                 (multiple-value-list
+                  (case token-type
+                    (:array (array-from-json json-str))
+                    (:string (string-from-json json-str))
+                    (:number (number-from-json json-str))
+                    (:bool (bool-from-json json-str))
+                    (:null (null-from-json json-str))))))
              (when (not (null (first returned-token-info)))
                (return returned-token-info))))))
     (if (null token-info)
+        ;; if a token was not found, check whether it is because there
+        ;; are no more tokens left.
         (multiple-value-bind (match-start match-end)
-            (scan "^\\s*]" json-str)
+            (scan (concatenate 'string "^\\s*" end-delimiter) json-str)
           (if (and match-start match-end)
               (values :empty nil (subseq json-str match-end))
               (values :invalid nil json-str)))
-        ;; strip off extra spaces and trailing ',' or ']'
-        (multiple-value-bind (match-start match-end)
-            (scan "^\\s*,\\s*" (second token-info))
-          (if (and match-start match-end)
-              (values :element
-                      (first token-info) (subseq (second token-info) match-end))
-              (multiple-value-bind (match-start match-end)
-                  (scan "^\\s*]\\s*" (second token-info))
-                (if (and match-start match-end)
-                    (values :last-element
-                            (first token-info)
-                            (subseq (second token-info) match-end))
-                    (values :invalid nil json-str))))))))
+        ;; if a token was found, check whether it is followed by
+        ;; either ',' or the end-delimiter.
+        (let ((token (first token-info))
+              (unprocessed-str (second token-info)))
+          (multiple-value-bind (match-start match-end)
+              (scan "^\\s*,\\s*" unprocessed-str)
+            (if (and match-start match-end)
+                (values :element token (subseq unprocessed-str match-end))
+                (multiple-value-bind (match-start match-end)
+                    (scan (concatenate 'string "^\\s*" end-delimiter "\\s*")
+                          unprocessed-str)
+                  (if (and match-start match-end)
+                      (values :last-element token
+                              (subseq unprocessed-str match-end))
+                      (values :invalid nil json-str)))))))))
 
 (defun string-from-json (json-str &key (convert-control-chars nil))
   (multiple-value-bind (match-start match-end reg-starts reg-ends)
