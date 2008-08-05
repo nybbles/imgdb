@@ -63,7 +63,7 @@
                (return returned-token-info))))))
     (if (null token-info)
         (multiple-value-bind (match-start match-end)
-            (scan "^\\s*\\]" json-str)
+            (scan "^\\s*]" json-str)
           (if (and match-start match-end)
               (values :empty nil (subseq json-str match-end))
               (values :invalid nil json-str)))
