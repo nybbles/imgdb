@@ -24,7 +24,30 @@
 (defparameter *json-bool-regex* "^\\s*(true|false)\\s*")
 (defparameter *json-null-regex* "^\\s*(null)\\s*")
 
-(defun from-json (json-str &optional (result nil)))
+(defun from-json (json-str)
+  (multiple-value-bind (result remaining-str)
+      (object-from-json json-str)
+    (if (or (null result) (> (length remaining-str) 0))
+        (error 'json-parse-error)
+        result)))
+
+(defun object-from-json (json-str)
+  (let ((json-str (strip-leading-whitespace json-str)))
+    (if (and (> (length json-str) 0) (eq (aref json-str 0) #\{))
+        (loop with curr-json-str = (subseq json-str 1)
+           with results = '()
+           do (multiple-value-bind (status token-info rest-str)
+                  (next-object-element-from-json curr-json-str (length results))
+                (setf curr-json-str rest-str)
+                (ecase status
+                  (:empty (return (values '(:object) curr-json-str)))
+                  (:invalid (return (values nil curr-json-str)))
+                  (:element (push token-info results))
+                  (:last-element
+                   (push token-info results)
+                   (return (values (cons :object (reverse results))
+                                   curr-json-str))))))
+        (values nil json-str))))
 
 (defun array-from-json (json-str)
   (let ((json-str (strip-leading-whitespace json-str)))
