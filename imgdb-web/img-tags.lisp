@@ -26,28 +26,26 @@
 
 (defun from-json (json-str &optional (result nil)))
 
-; Implement non-recursive arrays first. Extending them to be recursive
-; will be relatively easy.
 (defun array-from-json (json-str)
   (let ((json-str (strip-leading-whitespace json-str)))
     (if (and (> (length json-str) 0) (eq (aref json-str 0) #\[))
         (loop with curr-json-str = (subseq json-str 1)
-           with result = '()
-           for i from 0 to 9
+           with results = '()
            do (multiple-value-bind (status token rest-str)
-                  (next-array-element-from-json curr-json-str)
+                  (next-array-element-from-json curr-json-str (length results))
                 (setf curr-json-str rest-str)
                 (ecase status
                   (:empty (return (values '(:array) curr-json-str)))
                   (:invalid (return (values nil curr-json-str)))
-                  (:element (push token result))
+                  (:element (push token results))
                   (:last-element
-                   (push token result)
-                   (return (values (cons :array (reverse result))
+                   (push token results)
+                   (return (values (cons :array (reverse results))
                                    curr-json-str))))))
         (values nil json-str))))
 
-(defmacro next-element-from-json (json-str end-delimiter &body token-info-code)
+(defmacro next-element-from-json
+    (json-str end-delimiter num-results &body token-info-code)
   (let ((token-info (gensym "TOKEN-INFO-"))
         (match-start (gensym "MATCH-START-"))
         (match-end (gensym "MATCH-END-"))
@@ -62,7 +60,7 @@
            ;; are no more tokens left.
            (multiple-value-bind (,match-start ,match-end)
                (scan (concatenate 'string "^\\s*" ,end-delimiter) ,json-str)
-             (if (and ,match-start ,match-end)
+             (if (and ,match-start ,match-end (= ,num-results 0))
                  (values :empty nil (subseq ,json-str ,match-end))
                  (values :invalid nil ,json-str)))
            ;; if a token was found, check whether it is followed by
@@ -82,21 +80,46 @@
                                  (subseq ,unprocessed-str ,match-end))
                          (values :invalid nil ,json-str))))))))))
 
-(defun next-array-element-from-json (json-str)
-  (next-element-from-json
-   json-str "]"
-   (dolist (token-type '(:array :string :number :bool :null))
-     (let
-         ((returned-token-info
-           (multiple-value-list
-            (case token-type
-              (:array (array-from-json json-str))
-              (:string (string-from-json json-str))
-              (:number (number-from-json json-str))
-              (:bool (bool-from-json json-str))
-              (:null (null-from-json json-str))))))
-       (when (not (null (first returned-token-info)))
-         (return returned-token-info))))))
+(defun next-object-element-from-json (json-str num-results)
+  (next-element-from-json json-str "}" num-results
+    (get-token-info-for-next-object-element-from-json json-str)))
+
+(defun next-array-element-from-json (json-str num-results)
+  (next-element-from-json json-str "]" num-results
+    (get-token-info-for-next-array-element-from-json json-str)))
+
+(defun get-token-info-for-next-object-element-from-json (json-str)
+  (multiple-value-bind (token-key unprocessed-str)
+      (string-from-json json-str)
+    (if (null token-key)
+        nil
+        (multiple-value-bind (match-start match-end)
+            (scan "^\\s*:\\s*" unprocessed-str)
+          (if (and match-start match-end)
+              (let* ((unprocessed-str (subseq unprocessed-str match-end))
+                     (partial-token-info
+                      (get-token-info-for-next-array-element-from-json
+                       unprocessed-str)))
+                (when partial-token-info
+                  (let ((token (first partial-token-info))
+                        (unprocessed-str (second partial-token-info)))
+                    (list (list token-key token) unprocessed-str))))
+              nil)))))
+
+(defun get-token-info-for-next-array-element-from-json (json-str)
+  (dolist (token-type '(:object :array :string :number :bool :null))
+    (let
+        ((returned-token-info
+          (multiple-value-list
+           (case token-type
+             (:object (object-from-json json-str))
+             (:array (array-from-json json-str))
+             (:string (string-from-json json-str))
+             (:number (number-from-json json-str))
+             (:bool (bool-from-json json-str))
+             (:null (null-from-json json-str))))))
+      (when (not (null (first returned-token-info)))
+        (return returned-token-info)))))
 
 (defun string-from-json (json-str &key (convert-control-chars nil))
   (multiple-value-bind (match-start match-end reg-starts reg-ends)
