@@ -82,7 +82,7 @@
            ;; if a token was not found, check whether it is because there
            ;; are no more tokens left.
            (multiple-value-bind (,match-start ,match-end)
-               (scan (concatenate 'string "^\\s*" ,end-delimiter) ,json-str)
+               (scan ,(concatenate 'string "^\\s*" `,end-delimiter) ,json-str)
              (if (and ,match-start ,match-end (= ,num-results 0))
                  (values :empty nil (subseq ,json-str ,match-end))
                  (values :invalid nil ,json-str)))
@@ -96,7 +96,8 @@
                    (values :element ,token
                            (subseq ,unprocessed-str ,match-end))
                    (multiple-value-bind (,match-start ,match-end)
-                       (scan (concatenate 'string "^\\s*" ,end-delimiter "\\s*")
+                       (scan ,(concatenate 'string 
+                                           "^\\s*" `,end-delimiter "\\s*")
                              ,unprocessed-str)
                      (if (and ,match-start ,match-end)
                          (values :last-element ,token
