@@ -10,6 +10,78 @@
 
 (defun delete-img-tags-handler ())
 
+(defun to-json (json-sexp)
+  (or (object-to-json json-sexp)
+      (error 'json-invalid-sexp-error)))
+
+(defun object-to-json (json-sexp)
+  (if (and (listp json-sexp) (eq (first json-sexp) :object))
+      (let ((result (make-array 0 :element-type 'character :fill-pointer t)))
+        (with-output-to-string (s result)
+          (format s "{")
+          (loop for element in (cdr json-sexp)
+             with first-element = t
+             do
+             (unless (and (listp element) (= (length element) 2))
+               (error 'json-invalid-sexp-error))
+             (unless first-element (format s ", "))
+             (let* ((key (string-to-json (first element)))
+                    (unparsed-value (second element))
+                    (value
+                     (or (object-to-json unparsed-value)
+                         (array-to-json unparsed-value)
+                         (string-to-json unparsed-value)
+                         (number-to-json unparsed-value)
+                         (null-to-json unparsed-value)
+                         (bool-to-json unparsed-value)
+                         (error 'json-invalid-sexp-error))))
+               (format s "~A : ~A" key value))
+             (setf first-element nil))
+          (format s "}"))
+        result)
+      nil))
+
+(defun array-to-json (json-sexp)
+  (if (and (listp json-sexp) (eq (first json-sexp) :array))
+      (let ((result (make-array 0 :element-type 'character :fill-pointer t)))
+        (with-output-to-string (s result)
+          (format s "[")
+          (loop for element in (cdr json-sexp)
+             with first-element = t
+             do
+             (unless first-element (format s ", "))
+             (let ((value
+                    (or (object-to-json element)
+                        (array-to-json element)
+                        (string-to-json element)
+                        (number-to-json element)
+                        (null-to-json element)
+                        (bool-to-json element)
+                        (error 'json-invalid-sexp-error))))
+               (format s "~A" value))
+             (setf first-element nil))
+          (format s "]"))
+        result)
+      nil))
+
+;; Does not do string translations yet.
+(defun string-to-json (json-sexp)
+  (if (stringp json-sexp) (concatenate 'string "\"" json-sexp "\"") nil))
+
+(defun number-to-json (json-sexp)
+  (if (numberp json-sexp) (write-to-string json-sexp) nil))
+
+(defun bool-to-json (json-sexp)
+  (if (and (keywordp json-sexp) (member json-sexp '(:true :false)))
+      (case json-sexp
+        (:true "true")
+        (:false "false")
+        (t (error 'json-invalid-sexp-error)))
+      nil))
+
+(defun null-to-json (json-sexp)
+  (if (and (keywordp json-sexp) (eq json-sexp :null)) "null" nil))
+
 (defparameter *json-object-regex* "^\\s*{\\s*(.*)\\s*}\\s*$")
 (defparameter *json-array-regex* "^\\s*[\\s*(.*)\\s*]\\s*")
 (defparameter *json-control-char-regex*
