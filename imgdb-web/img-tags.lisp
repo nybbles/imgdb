@@ -36,8 +36,6 @@
              "taglist"
              (make-json-array (add-img-tags img-id tags dbconn)))))))))))
 
-"/* {\"tags\" : [\"blah\", \"zah\"]} */"
-
 (defun delete-img-tags-handler ()
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
