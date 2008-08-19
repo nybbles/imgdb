@@ -22,7 +22,9 @@
          "/css/imgdb-web.css"
          (merge-pathnames "css/imgdb-web.css" *imgdb-web-root*))
         *dispatch-table*)
+  (push (create-regex-dispatcher "/get-img-tags$" 'get-img-tags-handler)
+        *dispatch-table*)
   (push (create-regex-dispatcher "/add-img-tags$" 'add-img-tags-handler)
         *dispatch-table*)
-  (push (create-regex-dispatcher "/delete-img-tag$" 'delete-img-tag-handler)
+  (push (create-regex-dispatcher "/delete-img-tags$" 'delete-img-tags-handler)
         *dispatch-table*))

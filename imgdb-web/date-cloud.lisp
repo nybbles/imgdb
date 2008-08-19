@@ -66,7 +66,8 @@
                                      :order-by order-by-clause
                                      :database database))
          (last-tag (car (last result))))
-    (if (and (eq order :asc) (null (car last-tag)))
+    ;; TODO (NM): Find out what this code is doing and document it.
+    (if (and (eq order :asc) (not (null result)) (null (car last-tag)))
         (push last-tag (subseq result 0 (- (length result) 1)))
         result)))
 

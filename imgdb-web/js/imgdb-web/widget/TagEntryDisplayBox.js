@@ -13,28 +13,96 @@ dojo.declare
                                   "templates/TagEntryDisplayBox.htm"),
      templateString: "",
      widgetsInTemplate: true,
-     initialtagset: ["car", "audi", "flower", "macro"],
-     tagset: [],
+     taglist: [],
+     imgid: "",
      postCreate: function()
      {
+       if (this.imgid == "")
+       {
+         throw("imgid not set");
+       }
+
        this.tagentrybox.displayNode.style.color = "#777777";
 
-       dojo.forEach
-         (this.initialtagset,
-          function(tag)
-          {
-            this._addTagDOMNode(tag);
-          },
-          this);
+       this._getTags();
      },
-     _addTagsEventHandler: function(value)
+     _getTags: function()
      {
-       var taglist = value.split(/\s+/).reverse();
-       this._addTags(taglist);
+       var tagdata = {imgid : this.imgid};
+       var widget = this;
+       dojo.rawXhrPost({
+             url: "/get-img-tags",
+             handleAs: "json-comment-filtered",
+             postData: dojo.toJson(tagdata),
+             timeout: 1000,
+             load: function(response, ioargs)
+             {
+               var tagstodelete = widget.taglist.slice(0);
+
+               dojo.forEach
+                 (tagstodelete,
+                  function(tag)
+                  {
+                    widget._deleteTagDOMNode(tag);
+                  },
+                  this);
+
+               dojo.forEach
+                 // (response.imgid,
+                 (response.taglist,
+                  function(tag)
+                  {
+                    widget._addTagDOMNode(tag);
+                  },
+                  this);
+               
+               widget.tagentrybox.setValue("");
+             },
+             error: function(response, ioargs)
+             {
+               alert(ioargs.xhr.status + ": " + response);
+             }
+       });
+     },
+     _addTagsEventHandler: function(rawtaglist)
+     {
+       var splittaglist = [];
+       rawtaglist = rawtaglist.split(/&quot;/);
+
+       var i = 0;
+       for (i = 0; i < rawtaglist.length; ++i)
+       {
+         if ((/^\s*$/).test(rawtaglist[i]))
+         {
+           continue;
+         }
+
+         if (i % 2 == 0)
+         {
+           var spaceseperatedtags = rawtaglist[i].split(/\s+/);
+
+           var j = 0;
+           for (j = 0; j < spaceseperatedtags.length; ++j)
+           {
+             if ((/^\s*$/).test(spaceseperatedtags[j]))
+             {
+               continue;
+             }
+
+             splittaglist[splittaglist.length] = spaceseperatedtags[j];
+           }
+         }
+         else
+         {
+           splittaglist[splittaglist.length] = rawtaglist[i];
+         }
+       }
+
+       this._addTags(splittaglist.reverse());
      },
      _addTags: function(taglist)
      {
-       var tagdata = {imgid : taglist};
+       var tagdata = {imgid : this.imgid, taglist : taglist};
        var widget = this;
        dojo.rawXhrPost({
              url: "/add-img-tags",
@@ -43,11 +111,19 @@ dojo.declare
              timeout: 1000,
              load: function(response, ioargs)
              {
-               // This code does not handle the case where tags have
-               // since been deleted.
+               var tagstodelete = widget.taglist.slice(0);
+
+               dojo.forEach
+                 (tagstodelete,
+                  function(tag)
+                  {
+                    widget._deleteTagDOMNode(tag);
+                  },
+                  this);
+
                dojo.forEach
                  // (response.imgid,
-                 (response.tags,
+                 (response.taglist,
                   function(tag)
                   {
                     widget._addTagDOMNode(tag);
@@ -83,22 +159,73 @@ dojo.declare
          newTagDiv.appendChild(newTag);
          newTagDiv.appendChild(newTagDelete);
 
-         this.taglist.insertBefore(newTagDiv, this.taglist.firstChild);
-         this.tagset[this.tagset.length] = tag;
+         this.taglistui.insertBefore(newTagDiv, this.taglistui.firstChild);
+         this.taglist[this.taglist.length] = tag;
        }
      },
      _deleteTagEventHandler: function(event)
      {
-       this._deleteTag(event.target.tag);
+       var taglist = [event.target.tag];
+       this._deleteTags(taglist);
      },
-     _deleteTag: function(tag)
+     _deleteTags: function(taglist)
+     {
+       var tagdata = {imgid : this.imgid, taglist : taglist};
+       var widget = this;
+       dojo.rawXhrPost({
+             url: "/delete-img-tags",
+             handleAs: "json-comment-filtered",
+             postData: dojo.toJson(tagdata),
+             timeout: 1000,
+             load: function(response, ioargs)
+             {
+               var tagstodelete = widget.taglist.slice(0);
+
+               dojo.forEach
+                 (tagstodelete,
+                  function(tag)
+                  {
+                    widget._deleteTagDOMNode(tag);
+                  },
+                  this);
+
+               dojo.forEach
+                 // (response.imgid,
+                 (response.taglist,
+                  function(tag)
+                  {
+                    widget._addTagDOMNode(tag);
+                  },
+                  this);
+               
+               widget.tagentrybox.setValue("");
+             },
+             error: function(response, ioargs)
+             {
+               alert(ioargs.xhr.status + ": " + response);
+             }
+       });
+     },
+     _doesTagExist: function(tag)
+     {
+       for (i = 0; i < this.taglist.length; ++i)
+       {
+         if (tag === this.taglist[i])
+         {
+           return 1;
+         }
+       }
+
+       return 0;
+     },
+     _deleteTagDOMNode: function(tag)
      {
        var i = 0;
        var tagFound = 0;
 
-       for (i = 0; i < this.tagset.length; ++i)
+       for (i = 0; i < this.taglist.length; ++i)
        {
-         if (tag === this.tagset[i])
+         if (tag === this.taglist[i])
          {
            tagFound = 1;
            break;
@@ -107,28 +234,16 @@ dojo.declare
 
        if (tagFound)
        {
-         this.tagset.splice(i, 1);
+         this.taglist.splice(i, 1);
        }
 
-       for (i = 0; i < this.taglist.childNodes.length; ++i)
+       for (i = 0; i < this.taglistui.childNodes.length; ++i)
        {
-         if (this.taglist.childNodes[i].tag === tag)
+         if (this.taglistui.childNodes[i].tag === tag)
          {
-           this.taglist.removeChild(this.taglist.childNodes[i]);
+           this.taglistui.removeChild(this.taglistui.childNodes[i]);
          }
        }
-     },
-     _doesTagExist: function(tag)
-     {
-       for (i = 0; i < this.tagset.length; ++i)
-       {
-         if (tag === this.tagset[i])
-         {
-           return 1;
-         }
-       }
-
-       return 0;
      }
  }
 );

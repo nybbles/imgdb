@@ -132,6 +132,8 @@
               (unless (equal img-url img-store-url)
                 (delete-file img-store-url)))))))
     (when img-inserted
+      (assert (not (null *img-resize-cache-conn-spec*)))
+      (assert (not (null *img-resize-cache-conn-type*)))
       ;; Create thumbnail.
       (with-thumbnail (in img-digest *default-thumbnail-size*)))
     img-inserted))

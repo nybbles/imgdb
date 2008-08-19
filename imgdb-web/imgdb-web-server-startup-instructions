@@ -1,0 +1,13 @@
+- Load the code using ASDF (asdf:oos 'asdf:load-op :imgdb-web).
+- Run (start-imgdb-web-server) with the required arguments:
+  - imgdb-store database conn spec
+  - imgdb-store database conn type
+  - imgdb-web root
+  - port (default: 4242)
+  - img-resize-cache-store
+  - img-resize-cache-conn-spec
+  - img-resize-cache-conn-type
+  - postgresql-so-load-path "
+- Create all the required database tables with provided functions.
+- Index some images
+- View imgdb-web at http://<host>:4242

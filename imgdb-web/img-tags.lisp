@@ -1,28 +1,119 @@
 (in-package :imgdb-web)
 
-(defun add-img-tags-handler ()
-  (let ((json (raw-post-data :force-text t)))
+(defun get-img-tags-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
-    (setf (log-file) "/Users/nimalan/Desktop/imgdb-log")
-    (log-message* "add-img-tags-handler received post data: [~A]~%"
-                  json)
-    "/* {\"tags\" : [\"blah\", \"zah\"]} */"))
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json)))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "taglist"
+             (make-json-array (get-img-tags img-id dbconn)))))))))))
 
-(defun delete-img-tags-handler ())
+(defun add-img-tags-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
+    (setf (content-type *reply*) "application/json")
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json))
+               (tags
+                (remove-if
+                 #'(lambda (x) (scan "^\s*$" x))
+                 (get-json-array-contents (json-ob-get "taglist" json)))))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "taglist"
+             (make-json-array (add-img-tags img-id tags dbconn)))))))))))
+
+"/* {\"tags\" : [\"blah\", \"zah\"]} */"
+
+(defun delete-img-tags-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
+    (setf (content-type *reply*) "application/json")
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json))
+               (tags (get-json-array-contents (json-ob-get "taglist" json))))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "taglist"
+             (make-json-array (delete-img-tags img-id tags dbconn)))))))))))
+
+(defun make-json-object (elements)
+  (cons :object elements))
+
+(defun json-ob-get (key json-ob)
+  (unless (and (json-objectp json-ob) (stringp key))
+    (error 'json-invalid-type-error))
+  (let ((result (assoc key (cdr json-ob) :test #'string=)))
+    (if (null result)
+        nil
+        (second result))))
+
+(defun get-json-object-elements (json-ob)
+  (unless (json-objectp json-ob) (error 'json-invalid-type-error))
+  (cdr json-ob))
+
+(defun make-json-array (list)
+  (cons :array list))
+
+(defun json-aref (index json-array)
+  (unless (and (json-arrayp json-array) (typep index '(integer 0)))
+    (error 'json-invalid-type-error))
+  (let ((result (nthcdr index (cdr json-array))))
+    (if (null result)
+        nil
+        (first result))))
+
+(defun get-json-array-contents (json-array)
+  (unless (json-arrayp json-array) (error 'json-invalid-type-error))
+  (cdr json-array))
+
+(defun comment-filter-json (json)
+  (concatenate 'string "/* " json " */"))
 
 (defun to-json (json-sexp)
   (or (object-to-json json-sexp)
       (error 'json-invalid-sexp-error)))
 
+(defun json-objectp (thing)
+  (and (listp thing) (eq (first thing) :object)))
+
+;;; Um, maybe a struct is in order.
+(defun json-object-elementp (thing)
+  (and (listp thing) (= (length thing) 2) (stringp (first thing))))
+(defun json-object-element-key (json-ob-element)
+  (first json-ob-element))
+(defun json-object-element-value (json-ob-element)
+  (second json-ob-element))
+(defun make-json-object-element (key value)
+  (list key value))
+
 (defun object-to-json (json-sexp)
-  (if (and (listp json-sexp) (eq (first json-sexp) :object))
+  (if (json-objectp json-sexp)
       (let ((result (make-array 0 :element-type 'character :fill-pointer t)))
         (with-output-to-string (s result)
           (format s "{")
           (loop for element in (cdr json-sexp)
              with first-element = t
              do
-             (unless (and (listp element) (= (length element) 2))
+             (unless (json-object-elementp element)
                (error 'json-invalid-sexp-error))
              (unless first-element (format s ", "))
              (let* ((key (string-to-json (first element)))
@@ -41,8 +132,11 @@
         result)
       nil))
 
+(defun json-arrayp (thing)
+  (and (listp thing) (eq (first thing) :array)))
+
 (defun array-to-json (json-sexp)
-  (if (and (listp json-sexp) (eq (first json-sexp) :array))
+  (if (json-arrayp json-sexp)
       (let ((result (make-array 0 :element-type 'character :fill-pointer t)))
         (with-output-to-string (s result)
           (format s "[")
