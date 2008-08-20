@@ -53,6 +53,72 @@
              "taglist"
              (make-json-array (delete-img-tags img-id tags dbconn)))))))))))
 
+(defun get-img-title-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
+    (setf (content-type *reply*) "application/json")
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json)))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "title"
+             (select-img-title img-id dbconn))))))))))
+
+(defun set-img-title-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
+    (setf (content-type *reply*) "application/json")
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json))
+               (title (json-ob-get "title" json)))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "title"
+             (update-img-title img-id title dbconn))))))))))
+
+(defun get-img-description-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
+    (setf (content-type *reply*) "application/json")
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json)))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "description"
+             (select-img-description img-id dbconn))))))))))
+
+(defun set-img-description-handler ()
+  (let ((json (from-json (raw-post-data :force-text t))))
+    (setf (content-type *reply*) "application/json")
+    (comment-filter-json
+     (to-json
+      (make-json-object
+       (with-database (dbconn *imgdb-store-db-conn-spec*
+                              :database-type *imgdb-store-db-type*
+                              :pool t :if-exists :old)
+         (let ((img-id (json-ob-get "imgid" json))
+               (description (json-ob-get "description" json)))
+           (list
+            (make-json-object-element "imgid" img-id)
+            (make-json-object-element
+             "description"
+             (update-img-description img-id description dbconn))))))))))
+
 (defun make-json-object (elements)
   (cons :object elements))
 

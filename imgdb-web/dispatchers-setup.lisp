@@ -27,4 +27,9 @@
   (push (create-regex-dispatcher "/add-img-tags$" 'add-img-tags-handler)
         *dispatch-table*)
   (push (create-regex-dispatcher "/delete-img-tags$" 'delete-img-tags-handler)
+        *dispatch-table*)
+  (push (create-regex-dispatcher "/set-img-title$" 'set-img-title-handler)
+        *dispatch-table*)
+  (push (create-regex-dispatcher "/set-img-description$"
+                                 'set-img-description-handler)
         *dispatch-table*))

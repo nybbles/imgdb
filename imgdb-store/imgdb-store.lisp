@@ -151,6 +151,9 @@
 (defun select-img-records (select-columns &rest args)
   (apply #'select-from-table *img-table* select-columns args))
 
+(defun update-img-records (&rest args)
+  (apply #'update-records *img-table* args))
+
 (defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]]
                    :from *img-table*
@@ -185,7 +188,9 @@
                   ([height] integer :not-null)
                   ([year] integer)
                   ([month] integer)
-                  ([day] integer))
+                  ([day] integer)
+                  ([title] (vector char 40))
+                  ([description] blob))
                 :database dbconn))
 (defun drop-img-table (dbconn)
   (drop-table *img-table* :database dbconn))
