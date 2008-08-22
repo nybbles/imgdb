@@ -10,21 +10,22 @@
         :class "date-cloud-year"
         (str
          (generate-tag-cloud
-          (get-tags "year" constraints :database dbconn))))
+          (get-tags-for-date-cloud "year" constraints :database dbconn))))
     (:h4 :align "left" "month")
     (:p :align "left"
         :class "date-cloud-month"
         (str
          (generate-tag-cloud
-          (get-tags "month" constraints :database dbconn :order :asc))))
+          (get-tags-for-date-cloud "month" constraints
+                                   :database dbconn :order :asc))))
     (:h4 :align "left" "day")
     (:p :align "left"
         :class "date-cloud-day"
         (str
          (generate-tag-cloud
-          (get-tags "day" constraints :database dbconn))))))
+          (get-tags-for-date-cloud "day" constraints :database dbconn))))))
 
-(defun get-friendly-tag-value (tag tag-value)
+(defun tag-value-to-display-name (tag tag-value)
   (cond
     ((equal tag "year")
      (translate-year-to-year-str tag-value))
@@ -33,13 +34,27 @@
     ((equal tag "day")
      (translate-day-to-day-str tag-value))))
 
-(defun get-tags (tag constraints &key database (order :desc))
+(defun get-tags-for-date-cloud (tag constraints &key database (order :desc))
+  (let ((pruned-constraints (remove-constraint constraints :name tag)))
+    (get-tags tag constraints
+              :tag-value-fn
+              #'(lambda (x) (if (null (first x)) "undated" (first x)))
+              :tag-quantity-fn #'second
+              :get-tags-fn
+              #'(lambda ()
+                  (select-num-imgs-for-tag-type
+                   tag pruned-constraints
+                   :database database :order order)))))
+
+(defun get-tags
+    (tag constraints
+     &key tag-value-fn tag-quantity-fn get-tags-fn)
   (let ((pruned-constraints (remove-constraint constraints :name tag)))
     (mapcar
      #'(lambda (x)
-         (let* ((tag-value (if (null (first x)) "undated" (first x)))
-                (friendly-tag-value (get-friendly-tag-value tag (first x)))
-                (tag-quantity (second x))
+         (let* ((tag-value (funcall tag-value-fn x))
+                (tag-quantity (funcall tag-quantity-fn x))
+                (display-name (tag-value-to-display-name tag tag-value))
                 (tag-is-active (find-constraint constraints
                                                 :name tag :value tag-value))
                 (tag-link
@@ -48,10 +63,8 @@
                       pruned-constraints
                       (cons (make-constraint tag tag-value)
                             pruned-constraints)))))
-           (list friendly-tag-value tag-link tag-quantity tag-is-active)))
-     (select-num-imgs-for-tag-type tag
-                                   pruned-constraints
-                                   :database database :order order))))
+           (list display-name tag-link tag-quantity tag-is-active)))
+     (funcall get-tags-fn))))
 
 (defun select-num-imgs-for-tag-type
     (tag-type constraints &key database (order :desc))

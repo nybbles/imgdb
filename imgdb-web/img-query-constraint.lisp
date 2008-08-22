@@ -124,7 +124,7 @@
 (defun find-constraint (constraints &key name value)
   (find-if #'(lambda (x)
                (and (if (null name) t (equal (constraint-name x) name))
-                      (if (null value) t (equal (constraint-value x) value))))
+                    (if (null value) t (equal (constraint-value x) value))))
            constraints))
 
 (defun remove-constraint (constraints &key name value)

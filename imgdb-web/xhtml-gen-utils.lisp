@@ -61,7 +61,8 @@
   (let ((year (first date))
         (month (second date))
         (day (third date)))
-    (cond ((and (null month) (not (null year)) (not (null day)))
+    (cond (;; If month is not present, but year and day are, ignore the day.
+           (and (null month) (not (null year)) (not (null day)))
            (translate-year-to-year-str year))
           ((and (null day) (null month) (null year)) "undated")
           (t
@@ -80,6 +81,7 @@
   (cond
     ((null year) "undated")
     ((integerp year) (write-to-string year))
+    ((and (stringp year) (equal year "undated")) "undated")
     (t (error "Incorrect type for year: ~A" (type-of year)))))
 
 (defun translate-month-to-month-str (month &key (type :short))
@@ -116,6 +118,7 @@
            (11 "Nov")
            (12 "Dec")
            (nil "undated"))))
+    ((and (stringp month) (equal month "undated")) "undated")
     (t (error "Incorrect type for month: ~A" (type-of month)))))
 
 (defun translate-day-to-day-str (day &key (type :short))
@@ -132,4 +135,5 @@
                    (3 "rd")
                    (t "th")))
          (write-to-string day)))
+    ((and (stringp day) (equal day "undated")) "undated")
     (t (error "Incorrect type for day: ~A" (type-of day)))))

@@ -1,0 +1,17 @@
+- Create an image tag cloud so that images can be constrained by
+  multiple tags.
+- Migrate from SHA1 hashes of entire image files to version 5 UUIDs to
+  identify images.
+- Write code for hashing just the image pixels while ignoring all the
+  other contents of the image file.
+- Create some method for uploading multiple images and checking for
+  duplicate images.
+- Implement logging code.
+- Make it possible to change the datetime on the image.
+- Make it possible to rotate the image.
+- Provide a way of getting back from an img-view of an image back to
+  the set of photos that the user was originally looking at.
+- Refactor the code.
+- Clean up the code.
+- Add support for users and groups.
+- Make the code reusable (i.e. build a higher-level language).
