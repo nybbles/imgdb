@@ -46,26 +46,6 @@
                    tag pruned-constraints
                    :database database :order order)))))
 
-(defun get-tags
-    (tag constraints
-     &key tag-value-fn tag-quantity-fn get-tags-fn)
-  (let ((pruned-constraints (remove-constraint constraints :name tag)))
-    (mapcar
-     #'(lambda (x)
-         (let* ((tag-value (funcall tag-value-fn x))
-                (tag-quantity (funcall tag-quantity-fn x))
-                (display-name (tag-value-to-display-name tag tag-value))
-                (tag-is-active (find-constraint constraints
-                                                :name tag :value tag-value))
-                (tag-link
-                 (get-query-link-for-constraints
-                  (if tag-is-active
-                      pruned-constraints
-                      (cons (make-constraint tag tag-value)
-                            pruned-constraints)))))
-           (list display-name tag-link tag-quantity tag-is-active)))
-     (funcall get-tags-fn))))
-
 (defun select-num-imgs-for-tag-type
     (tag-type constraints &key database (order :desc))
   (let* ((tag-type-column (sql-expression
