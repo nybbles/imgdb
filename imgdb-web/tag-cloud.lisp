@@ -21,25 +21,30 @@
                             (format nil "~A ~A" num-str imgs-str))
                           (str tag-name))) " "))))))
 
+;;; Lambda lists and return values for the various functions:
+;;; tag-value-fn: (query-result) => tag-value
+;;; tag-quantity-fn: (query-result) => tag-quantity
+;;; constraints-for-query-link-fn:
+;;;   (query-result tag tag-value tag-is-active) => constraints-for-query-link
+;;; get-tags-fn: () => query-results
 (defun get-tags
     (tag constraints
-     &key tag-value-fn tag-quantity-fn get-tags-fn)
-  (let ((pruned-constraints (remove-constraint constraints :name tag)))
-    (mapcar
-     #'(lambda (x)
-         (let* ((tag-value (funcall tag-value-fn x))
-                (tag-quantity (funcall tag-quantity-fn x))
-                (display-name (tag-value-to-display-name tag tag-value))
-                (tag-is-active (find-constraint constraints
-                                                :name tag :value tag-value))
-                (tag-link
-                 (get-query-link-for-constraints
-                  (if tag-is-active
-                      pruned-constraints
-                      (cons (make-constraint tag tag-value)
-                            pruned-constraints)))))
-           (list display-name tag-link tag-quantity tag-is-active)))
-     (funcall get-tags-fn))))
+     &key
+     tag-value-fn tag-quantity-fn
+     constraints-for-query-link-fn get-tags-fn)
+  (mapcar
+   #'(lambda (x)
+       (let* ((tag-value (funcall tag-value-fn x))
+              (tag-quantity (funcall tag-quantity-fn x))
+              (display-name (tag-value-to-display-name tag tag-value))
+              (tag-is-active (find-constraint constraints
+                                              :name tag :value tag-value))
+              (tag-link
+               (get-query-link-for-constraints
+                (funcall constraints-for-query-link-fn
+                         x tag tag-value tag-is-active))))
+         (list display-name tag-link tag-quantity tag-is-active)))
+   (funcall get-tags-fn)))
 
 (defun get-cloud-tag-class (active quantity mid-exponent &optional (base 10))
   (concatenate 'string

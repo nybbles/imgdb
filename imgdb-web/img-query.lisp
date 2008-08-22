@@ -19,8 +19,12 @@
                     (:a :href "login.htm" "Sign in"))
               (:br)
               (:br)
-              (:div :id "date-cloud"
-                    (str (generate-date-cloud constraints dbconn)))
+              (:div :id "tag-cloud"
+               (:h3 :align "center" "Pictures by:")
+               (:div :id "date-cloud"
+                     (str (generate-date-cloud constraints dbconn)))
+               (:div :id "img-tag-cloud"
+                     (str (generate-img-tag-cloud constraints dbconn))))
               (:div :id "front-content"
                     (str
                      (create-thumbnail-grid

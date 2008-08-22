@@ -27,13 +27,30 @@ div#front-content
     text-align: left;
 }
 
-div#date-cloud
+div#tag-cloud
 {
     float: right;
     top: 80px;
     right: 30px;
     
-    width: 300px;
+    text-align: center;
+}
+
+div#date-cloud
+{
+    float: center;
+    top: 80px;
+    right: 30px;
+    
+    text-align: center;
+}
+
+div#img-tag-cloud
+{
+    float: center;
+    top: 80px;
+    right: 30px;
+    
     text-align: center;
 }
 

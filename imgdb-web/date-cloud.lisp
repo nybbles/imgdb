@@ -4,7 +4,6 @@
 
 (defun generate-date-cloud (constraints dbconn)
   (with-html-output-to-string (output nil)
-    (:h3 :align "center" "Pictures by:")
     (:h4 :align "left" "year")
     (:p :align "left"
         :class "date-cloud-year"
@@ -40,6 +39,12 @@
               :tag-value-fn
               #'(lambda (x) (if (null (first x)) "undated" (first x)))
               :tag-quantity-fn #'second
+              :constraints-for-query-link-fn
+              #'(lambda (x tag tag-value tag-is-active)
+                  (if tag-is-active
+                      pruned-constraints
+                      (cons (make-constraint tag tag-value)
+                            pruned-constraints)))
               :get-tags-fn
               #'(lambda ()
                   (select-num-imgs-for-tag-type
