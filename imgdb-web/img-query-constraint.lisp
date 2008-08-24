@@ -1,9 +1,14 @@
 (in-package :imgdb-web)
 
 (defparameter *non-db-constraints* '("current"))
-(defparameter *db-constraints* '("year" "month" "day"))
+(defparameter *img-table-constraints* '("year" "month" "day"))
 (defparameter *temporal-constraints* '("year" "month" "day"))
-(defparameter *valid-constraints* (union *non-db-constraints* *db-constraints*))
+(defparameter *img-tag-table-constraints* '("imgtag"))
+(defparameter *valid-constraints*
+  (union *non-db-constraints* *img-table-constraints*
+         *img-tag-table-constraints* *temporal-constraints*))
+(defparameter *db-constraints*
+  (set-difference *valid-constraints* *non-db-constraints*))
 
 (defun translate-constraints-to-sql (constraints)
   (labels
@@ -82,6 +87,16 @@
             'string result "&"
             (translate-constraint-to-url-get-parameter constraint))
            finally (return result)))))
+
+(defun img-tag-table-constraint? (x)
+  (if (and (well-formed-constraint? x)
+           (member (car x) *img-tag-table-constraints* :test #'equal))
+      t nil))
+
+(defun img-table-constraint? (x)
+  (if (and (well-formed-constraint? x)
+           (member (car x) *img-table-constraints* :test #'equal))
+      t nil))
 
 (defun well-formed-constraint? (x)
   (and (consp x) (stringp (car x)) (atom (cdr x))))

@@ -1,5 +1,31 @@
 (in-package :imgdb-web)
 
+(defun generate-img-tag-cloud (constraints dbconn)
+  (with-html-output-to-string (output nil)
+    (:h4 :align "left" "tags")
+    (:p :align "left"
+        :class "date-cloud-year"
+        (str
+         (generate-tag-cloud
+          (get-tags-for-img-tag-cloud constraints :database dbconn))))))
+
+(defun get-tags-for-img-tag-cloud (constraints &key database)
+  (get-tags "imgtag" constraints
+            :tag-value-fn #'first
+            :tag-quantity-fn #'second
+            :constraints-for-query-link-fn
+            #'(lambda (query-result tag tag-value tag-is-active)
+                (if tag-is-active
+                    (remove-constraint constraints
+                                       :name "imgtag" :value tag-value)
+                    (cons (make-constraint "imgtag" tag-value) constraints)))
+            :get-tags-fn
+            #'(lambda ()
+                (select-num-imgs-for-imgtags constraints :database database))))
+
+;;; NM: STUB
+(defun select-num-imgs-for-imgtags (constraints &key database (order :asc)))
+
 (defun get-img-tags-handler ()
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
