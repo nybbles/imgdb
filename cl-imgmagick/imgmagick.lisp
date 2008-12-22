@@ -55,6 +55,9 @@
   (create-scanner "(\\d+):(\\d+):(\\d+) (\\d+):(\\d+):(\\d+)"
                   :single-line-mode t))
 
+(defun create-exif-date-str (date)
+  (apply #'format nil "~a:~a:~a ~a:~a:~a" date))
+
 (defun parse-exif-date (date-str)
   (register-groups-bind (year month day hour minute second)
       (*exif-date-scanner* date-str)
