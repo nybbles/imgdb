@@ -34,7 +34,10 @@
   (merge-pathnames
    (make-pathname :directory
                   (if (and year month day)
-                      (list :relative year month day)
+                      (list :relative
+                            (write-to-string year)
+                            (write-to-string month)
+                            (write-to-string day))
                       (list :relative "undated")))
    img-store))
 

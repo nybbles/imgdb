@@ -58,7 +58,8 @@
 (defun parse-exif-date (date-str)
   (register-groups-bind (year month day hour minute second)
       (*exif-date-scanner* date-str)
-    (list year month day hour minute second)))
+    (mapcar #'(lambda (x) (read-from-string x))
+            (list year month day hour minute second))))
 
 (defun image-get-property (wand property)
   (let ((result (magick-get-image-property wand property)))
