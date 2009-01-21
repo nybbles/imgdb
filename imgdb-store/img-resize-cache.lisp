@@ -213,35 +213,41 @@
    (select-resize-cache-entries
     (list [sum [filesize]]) :database dbconn)))
 
-(defun create-resize-cache-tables (dbconn)
-  (create-table *img-resize-cache-table*
-                '(([originalimgid] (vector char 40) :not-null)
-                  ([width] integer :not-null)
-                  ([height] integer :not-null)
-                  ([thumbnail] boolean :not-null)
-                  ([url] string :not-null :unique)
-                  ([filesize] integer :not-null)
-                  ([valid] boolean))
-                :constraints
-                '("PRIMARY KEY (originalimgid, width, height, thumbnail)")
-                :database dbconn)
-  (create-table *img-resize-cache-holds-table*
-                '(([originalimgid] (vector char 40) :not-null)
-                  ([width] integer :not-null)
-                  ([height] integer :not-null)
-                  ([thumbnail] boolean :not-null)
-                  ([threadid] string :not-null)
-                  ([usetime] bigint :not-null))
-                :constraints
-                '("PRIMARY KEY (originalimgid, width, height, thumbnail, threadid)")
-                :database dbconn))
+(defun create-resize-cache-tables (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (create-table *img-resize-cache-table*
+                  '(([originalimgid] (vector char 40) :not-null)
+                    ([width] integer :not-null)
+                    ([height] integer :not-null)
+                    ([thumbnail] boolean :not-null)
+                    ([url] string :not-null :unique)
+                    ([filesize] integer :not-null)
+                    ([valid] boolean))
+                  :constraints
+                  '("PRIMARY KEY (originalimgid, width, height, thumbnail)")
+                  :database dbconn)
+    (create-table *img-resize-cache-holds-table*
+                  '(([originalimgid] (vector char 40) :not-null)
+                    ([width] integer :not-null)
+                    ([height] integer :not-null)
+                    ([thumbnail] boolean :not-null)
+                    ([threadid] string :not-null)
+                    ([usetime] bigint :not-null))
+                  :constraints
+                  '("PRIMARY KEY (originalimgid, width, height, thumbnail, threadid)")
+                  :database dbconn)))
 
-(defun drop-resize-cache-tables (dbconn)
-  (drop-table *img-resize-cache-table* :database dbconn)
-  (drop-table *img-resize-cache-holds-table* :database dbconn))
-(defun resize-cache-tables-exist? (dbconn)
-  (table-exists-p *img-resize-cache-table* :database dbconn)
-  (table-exists-p *img-resize-cache-holds-table* :database dbconn))
+(defun drop-resize-cache-tables (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (drop-table *img-resize-cache-table* :database dbconn)
+    (drop-table *img-resize-cache-holds-table* :database dbconn)))
+(defun resize-cache-tables-exist? (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (and (table-exists-p *img-resize-cache-table* :database dbconn)
+         (table-exists-p *img-resize-cache-holds-table* :database dbconn))))
 
 (defun create-resized-image (img-id dimensions thumbnail dbconn)
   (let ((img-store-url

@@ -29,15 +29,21 @@
                     :database dbconn)
     (get-img-tags img-id dbconn)))
 
-(defun create-img-tags-table (dbconn)
-  (create-table *img-tags-table*
-                '(([imgid] (vector char 40) :not-null)
-                  ([tag] (vector char *max-tag-length*) :not-null))
-                :constraints '("PRIMARY KEY (imgid, tag)")
-                :database dbconn))
-(defun drop-img-tags-table (dbconn)
-  (drop-table *img-tags-table* :database dbconn))
-(defun img-tags-table-exists (dbconn)
-  (table-exists-p *img-tags-table* :database dbconn))
+(defun create-img-tags-table (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (create-table *img-tags-table*
+                  '(([imgid] (vector char 40) :not-null)
+                    ([tag] (vector char *max-tag-length*) :not-null))
+                  :constraints '("PRIMARY KEY (imgid, tag)")
+                  :database dbconn)))
+(defun drop-img-tags-table (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (drop-table *img-tags-table* :database dbconn)))
+(defun img-tags-table-exists (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (table-exists-p *img-tags-table* :database dbconn)))
 
 (restore-sql-reader-syntax-state)

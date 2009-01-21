@@ -179,8 +179,10 @@
 (defun img-database-exists (dbconn db-type)
   (probe-database dbconn :database-type db-type))
 
-(defun create-img-table (dbconn)
-  (create-table *img-table*
+(defun create-img-table (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (create-table *img-table*
                 '(([digest] (vector char 40) :not-null :unique :primary-key)
                   ([urldigest] (vector char 40) :not-null)
                   ([url] string :not-null :unique)
@@ -191,11 +193,30 @@
                   ([day] integer)
                   ([title] (vector char 40))
                   ([description] blob))
-                :database dbconn))
-(defun drop-img-table (dbconn)
-  (drop-table *img-table* :database dbconn))
-(defun img-table-exists (dbconn)
-  (table-exists-p *img-table* :database dbconn))
+                :database dbconn)))
+
+(defun drop-img-table (dbconn-spec db-type)
+  (with-database (dbconn dbconn-spec
+                         :database-type db-type :pool t :if-exists :old)
+    (drop-table *img-table* :database dbconn)))
+(defun img-table-exists (dbconn-spec db-type)
+  (with-database
+      (dbconn dbconn-spec
+              :database-type db-type :pool t :if-exists :old)
+    (table-exists-p *img-table* :database dbconn)))
+
+(defun create-all-tables (dbconn-spec db-type)
+  (unless (img-table-exists dbconn-spec db-type)
+    (create-img-table dbconn-spec db-type))
+  (unless (img-tags-table-exists dbconn-spec db-type)
+    (create-img-tags-table dbconn-spec db-type))
+  (unless (resize-cache-tables-exist? dbconn-spec db-type)
+    (create-resize-cache-tables dbconn-spec db-type)))
+
+(defun drop-all-tables (dbconn-spec db-type)
+  (drop-img-table dbconn-spec db-type)
+  (drop-img-tags-table dbconn-spec db-type)
+  (drop-resize-cache-tables dbconn-spec db-type))
 
 ;;; Stubs
 '(defun get-image (img-id dbconn))
