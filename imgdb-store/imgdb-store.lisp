@@ -5,10 +5,10 @@
 (defparameter *img-types* '("jpeg" "jpg"))
 (defparameter *default-dbconn-spec* '())
 
-(defun index-img-drop (img-drop img-store db-conn-spec db-type)
+(defun index-img-drop (img-drop img-store dbconn-spec db-type)
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
   (let ((num-imgs 0))
-    (with-database (dbconn db-conn-spec
+    (with-database (dbconn dbconn-spec
                            :database-type db-type :pool t :if-exists :old)
       (walk-directory
        img-drop
