@@ -13,29 +13,35 @@
 (defvar *img-db-type* nil)
 (defvar *img-store* nil)
 (defvar *img-drop* nil)
-
-(defconstant *default-img-db*
-  (list (namestring
-         (merge-pathnames
-          "imgdb.db"
-          (if *img-store* *img-store* *default-pathname-defaults*)))))
-(defconstant *default-img-db-type* :sqlite3)
+(defvar *imgdb-web-root* nil)
+(defvar *img-resize-cache-store* nil)
 
 (unless *img-drop* (error "No image drop directory specified."))
 (unless *img-store* (error "No image store directory specified."))
 (unless (and *img-db* *img-db-type*)
-  (setf *img-db* *default-img-db*)
-  (setf *img-db-type* *default-img-db-type*))
+  (error "No database information specified."))
 
-(asdf:oos 'asdf:load-op :imgdb-store)
-(use-package :imgdb-store)
+; Add libpq binary path if using postgresql
+(when (eq *img-db-type* :postgresql)
+  (push *postgresql-so-load-path* clsql:*foreign-library-search-paths*))
 
 ; Establish connection to database and create tables, if necessary
-(defparameter *img-db-conn* (connect-to-dbserver *img-db* *img-db-type*))
-(unless (img-table-exists *img-db-conn*)
-  (create-img-table *img-db-conn*))
+(asdf:oos 'asdf:load-op :imgdb-store)
+(imgdb-store:create-all-tables *img-db* *img-db-type*)
+
+; Set up database connection information for the resize cache
+(setf imgdb-store:*img-resize-cache-conn-spec* *img-db*)
+(setf imgdb-store:*img-resize-cache-conn-type* *img-db-type*)
+
+; Start up imgdb-web server
+(asdf:oos 'asdf:load-op :imgdb-web)
+(defparameter *imgdb-web-server*
+  (imgdb-web:start-imgdb-web-server
+   :db-type *img-db-type* :db-conn-spec *img-db*
+   :imgdb-web-root *imgdb-web-root*))
 
 ; Index images in imgdrop
 (format t "Indexing image drop...~%")
 (format t "Indexed ~D images.~%"
-        (index-img-drop *img-drop* *img-store* *img-db-conn*))
+        (imgdb-store:index-img-drop *img-drop* *img-store*
+                                    *img-db* *img-db-type*))
