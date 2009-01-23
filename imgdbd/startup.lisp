@@ -16,12 +16,19 @@
 (defvar *imgdb-web-root* nil)
 (defvar *img-resize-cache-store* nil)
 
+; Check that all required settings have been provided.
 (unless *img-drop* (error "No image drop directory specified."))
 (unless *img-store* (error "No image store directory specified."))
 (unless (and *img-db* *img-db-type*)
   (error "No database information specified."))
 
+(unless *imgdb-web-root* (error "No imgdb web server root specified."))
+(unless *img-resize-cache-store*
+  (error "Image resize cache store location not specified"))
+(unless *startup-script-dir* (error "Startup script directory not specified"))
+
 ; Add libpq binary path if using postgresql
+(asdf:oos 'asdf:load-op :clsql)
 (when (eq *img-db-type* :postgresql)
   (push *postgresql-so-load-path* clsql:*foreign-library-search-paths*))
 

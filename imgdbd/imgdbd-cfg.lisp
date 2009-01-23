@@ -7,3 +7,5 @@
 (defparameter *imgdb-web-root* nil)
 
 (defparameter *img-resize-cache-store* nil)
+
+(defparameter *startup-script-dir* nil)

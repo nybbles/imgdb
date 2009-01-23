@@ -17,3 +17,6 @@
 
 (defparameter *img-resize-cache-store* 
   (merge-pathnames "Desktop/imgdb-test/cache/" *default-pathname-defaults*))
+
+(defparameter *startup-script-dir*
+  (merge-pathnames "code/imgdb/imgdbd/" *default-pathname-defaults*))
