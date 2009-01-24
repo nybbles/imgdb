@@ -5,6 +5,40 @@
 (defparameter *img-types* '("jpeg" "jpg"))
 (defparameter *default-dbconn-spec* '())
 
+(defclass dbconn-info ()
+  ((dbconn-spec :initarg :conn-spec
+              :initform
+              (error "Database connection specification not provided"))
+   (dbconn-type :initarg :conn-type
+              :initform
+              (error "Database connection type not provided"))))
+
+(defclass imgdb-store ()
+  ((img-drop :initarg :img-drop
+             :initform (error "No image drop location provided")
+             :type pathname
+             :reader img-drop
+             :documentation
+             "The location that images are indexed from.")
+   (img-store :initarg :img-store
+              :initform (error "No image store location provided")
+              :type pathname
+              :reader img-store
+              :documentation
+              "The location where indexed images are stored.")
+   (dbconn-info :initarg :dbconn-info
+                :initform
+                (error "No database connection information provided")
+                :type dbconn-info
+                :reader dbconn-info
+                :documentation
+                "Database connection information for the database
+backend containing metadata")))
+
+(defmethod initialize-instance :after ((store imgdb-store) &key)
+  ;; Create any missing tables
+  (create-all-tables store))
+
 (defun index-img-drop (img-drop img-store dbconn-spec db-type)
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
   (let ((num-imgs 0))
