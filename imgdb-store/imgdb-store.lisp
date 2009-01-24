@@ -126,23 +126,25 @@ backend containing metadata")))
 
 ;;;; Functions for querying and updating images
 
-(defun img-record-exists (img-digest dbconn)
-  (> (caar (select [count [digest]]
-                   :from *img-table*
-                   :where [= [digest] img-digest]
-                   :database dbconn))
-     0))
+(defmethod img-record-exists ((store imgdb-store) img-digest)
+  (with-dbconn-info (dbconn (dbconn-info store))
+    (> (caar (select [count [digest]]
+                     :from *img-table*
+                     :where [= [digest] img-digest]
+                     :database dbconn))
+       0)))
+
+(defmethod count-img-records ((store imgdb-store))
+  (with-dbconn-info (dbconn (dbconn-info store))
+    (caar (select [count [*]]
+                  :from *img-table*
+                  :database dbconn))))
 
 (defun select-img-records (select-columns &rest args)
   (apply #'select-from-table *img-table* select-columns args))
 
 (defun update-img-records (&rest args)
   (apply #'update-records *img-table* args))
-
-(defun count-img-records (dbconn)
-  (caar (select [count [*]]
-                :from *img-table*
-                :database dbconn)))
 
 ;;;; Database table creation/deletion functions
 (defmethod create-img-table ((store imgdb-store))
