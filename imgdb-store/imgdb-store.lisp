@@ -4,6 +4,7 @@
 
 (defparameter *img-types* '("jpeg" "jpg"))
 (defparameter *default-dbconn-spec* '())
+(defparameter *default-thumbnail-size* 100)
 
 (defclass dbconn-info ()
   ((dbconn-spec :initarg :conn-spec
@@ -124,8 +125,6 @@ backend containing metadata")))
         (invoke-restart restart)
         (error 'control-error))))
 
-(defparameter *default-thumbnail-size* 100)
-
 (defun index-img (img-url img-store dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
@@ -200,19 +199,6 @@ backend containing metadata")))
                 :from *img-table*
                 :database dbconn)))
 
-(defun create-imgdb-dbconn (dbconn-spec db-type)
-  "Connect to an imgdb database"
-  (connect dbconn-spec :database-type db-type))
-(defun destroy-imgdb-dbconn (dbconn)
-  (disconnect :database dbconn))
-
-(defun create-img-database (dbconn db-type)
-  (create-database dbconn :database-type db-type))
-(defun destroy-img-database (dbconn db-type)
-  (destroy-database dbconn :database-type db-type))
-(defun img-database-exists (dbconn db-type)
-  (probe-database dbconn :database-type db-type))
-
 (defun create-img-table (dbconn-spec db-type)
   (with-database (dbconn dbconn-spec
                          :database-type db-type :pool t :if-exists :old)
@@ -270,9 +256,5 @@ backend containing metadata")))
                     :pool t
                     :if-exists :old)
      ,@body))
-
-;;; Stubs
-'(defun get-image (img-id dbconn))
-'(defun repair-img-store (img-store dbconn))
 
 (restore-sql-reader-syntax-state)
