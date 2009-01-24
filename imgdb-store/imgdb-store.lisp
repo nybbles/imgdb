@@ -42,11 +42,12 @@ backend containing metadata")))
 
 ;;;; Functions for indexing and removing images
 
-(defun index-img-drop (img-drop img-store dbconn-spec db-type)
+(defmethod index-img-drop ((store imgdb-store))
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
-  (let ((num-imgs 0))
-    (with-database (dbconn dbconn-spec
-                           :database-type db-type :pool t :if-exists :old)
+  (let ((num-imgs 0)
+        (img-drop (img-drop store))
+        (img-store (img-store store)))
+    (with-dbconn-info (dbconn (dbconn-info store))
       (walk-directory
        img-drop
        (lambda (x)
@@ -68,10 +69,15 @@ backend containing metadata")))
         (invoke-restart restart)
         (error 'control-error))))
 
-(defun index-img (img-url img-store dbconn)
+(defmethod index-img ((store imgdb-store) img-url)
+  (with-dbconn-info (dbconn (dbconn-info imgdb-store))
+    (index-img store img-url dbconn)))
+
+(defmethod index-img ((store imgdb-store) img-url dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
-  (let ((img-digest (byte-array-to-hex-string (digest-file :sha1 img-url)))
+  (let ((img-store (img-store store))
+        (img-digest (byte-array-to-hex-string (digest-file :sha1 img-url)))
         (img-inserted nil))
     (unless (img-record-exists img-digest dbconn)
       (with-magick-wand (wand)
@@ -114,15 +120,16 @@ backend containing metadata")))
       (with-thumbnail (in img-digest *default-thumbnail-size*)))
     img-inserted))
 
-(defun remove-img-record (img-url dbconn)
+(defmethod remove-img-record ((store imgdb-store) img-url)
   "Removes the record indexed by id from the database"
-  (let ((img-urldigest (byte-array-to-hex-string
-                        (digest-sequence
-                         :sha1 (ascii-string-to-byte-array img-url)))))
-    (delete-records :from *img-table*
-                    :where [= [urldigest] img-urldigest]
-                    :database dbconn)
-    (delete-file img-url)))
+  (with-dbconn-info (dbconn (dbconn-info store))
+    (let ((img-urldigest (byte-array-to-hex-string
+                          (digest-sequence
+                           :sha1 (ascii-string-to-byte-array img-url)))))
+      (delete-records :from *img-table*
+                      :where [= [urldigest] img-urldigest]
+                      :database dbconn)
+      (delete-file img-url))))
 
 ;;;; Functions for querying and updating images
 
