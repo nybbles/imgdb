@@ -39,6 +39,7 @@
 ; Set up database connection information for the resize cache
 (setf imgdb-store:*img-resize-cache-conn-spec* *img-db*)
 (setf imgdb-store:*img-resize-cache-conn-type* *img-db-type*)
+(setf imgdb-store:*img-resize-cache-store* *img-resize-cache-store*)
 
 ; Start up imgdb-web server
 (asdf:oos 'asdf:load-op :imgdb-web)
