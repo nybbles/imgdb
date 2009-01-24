@@ -59,65 +59,6 @@ backend containing metadata")))
                        :test #'string-equal)))))
     num-imgs))
 
-(defun get-img-store-url (img-url year month day img-store)
-  (merge-pathnames
-   (make-pathname :name (pathname-name img-url)
-                  :type (pathname-type img-url))
-   (get-img-store-directory year month day img-store)))
-
-(defun get-img-store-directory (year month day img-store)
-  (merge-pathnames
-   (make-pathname :directory
-                  (if (and year month day)
-                      (list :relative year month day)
-                      (list :relative "undated")))
-   img-store))
-
-(let ((url-version-scanner (create-scanner "(.+)-(\\d+)$")))
-  (defun get-next-available-img-store-url (img-digest img-store-url)
-    (if (is-img-store-url-occupied img-digest img-store-url)
-        (get-next-available-img-store-url
-         img-digest
-         (let* ((name (pathname-name img-store-url))
-                (type (pathname-type img-store-url))
-                (next-name
-                 (register-groups-bind (name version)
-                     (url-version-scanner name)
-                   (unless (or (null name) (null version))
-                     (let ((next-version (+ 1 (parse-integer version))))
-                       (concatenate 'string
-                                    name "-"
-                                    (write-to-string next-version)))))))
-           (merge-pathnames
-            (make-pathname :name
-                           (if next-name
-                               next-name
-                               (concatenate 'string name "-" "1"))
-                           :type type)
-            img-store-url)))
-        img-store-url)))
-
-(defun is-img-store-url-occupied (img-digest img-store-url)
-  (and
-   (probe-file img-store-url)
-   (not
-    (equal img-digest
-           (byte-array-to-hex-string (digest-file :sha1 img-store-url))))))
-
-(defun move-img-from-img-drop-to-img-store
-    (img-digest img-url year month day img-store)
-  (let ((img-store-url
-         (get-next-available-img-store-url
-          img-digest
-          (get-img-store-url img-url year month day img-store))))
-    (if (equal img-url img-store-url)
-        img-store-url
-        (progn
-          (ensure-directories-exist
-           (directory-namestring img-store-url))
-          (copy-file img-url img-store-url)
-          img-store-url))))
-
 (defun skip-img-record-creation (c)
   (declare (ignore c))
   (let ((restart (find-restart 'skip-img-record-creation)))
@@ -240,6 +181,7 @@ backend containing metadata")))
 
 ;;;; Utility macros and functions
 
+;;; Utility macros for opening pooled database connections
 (defmacro with-dbconn-info ((dbconn-var dbconn-info-var) &body body)
   (let ((dbconn-spec-var (gensym "DBCONN-SPEC-"))
         (dbconn-type-var (gensym "DBCONN-TYPE-")))
@@ -256,5 +198,65 @@ backend containing metadata")))
                     :pool t
                     :if-exists :old)
      ,@body))
+
+;;; Utility functions for pathnames in image store directory
+(defun get-img-store-url (img-url year month day img-store)
+  (merge-pathnames
+   (make-pathname :name (pathname-name img-url)
+                  :type (pathname-type img-url))
+   (get-img-store-directory year month day img-store)))
+
+(defun get-img-store-directory (year month day img-store)
+  (merge-pathnames
+   (make-pathname :directory
+                  (if (and year month day)
+                      (list :relative year month day)
+                      (list :relative "undated")))
+   img-store))
+
+(let ((url-version-scanner (create-scanner "(.+)-(\\d+)$")))
+  (defun get-next-available-img-store-url (img-digest img-store-url)
+    (if (is-img-store-url-occupied img-digest img-store-url)
+        (get-next-available-img-store-url
+         img-digest
+         (let* ((name (pathname-name img-store-url))
+                (type (pathname-type img-store-url))
+                (next-name
+                 (register-groups-bind (name version)
+                     (url-version-scanner name)
+                   (unless (or (null name) (null version))
+                     (let ((next-version (+ 1 (parse-integer version))))
+                       (concatenate 'string
+                                    name "-"
+                                    (write-to-string next-version)))))))
+           (merge-pathnames
+            (make-pathname :name
+                           (if next-name
+                               next-name
+                               (concatenate 'string name "-" "1"))
+                           :type type)
+            img-store-url)))
+        img-store-url)))
+
+(defun is-img-store-url-occupied (img-digest img-store-url)
+  (and
+   (probe-file img-store-url)
+   (not
+    (equal img-digest
+           (byte-array-to-hex-string (digest-file :sha1 img-store-url))))))
+
+(defun move-img-from-img-drop-to-img-store
+    (img-digest img-url year month day img-store)
+  (let ((img-store-url
+         (get-next-available-img-store-url
+          img-digest
+          (get-img-store-url img-url year month day img-store))))
+    (if (equal img-url img-store-url)
+        img-store-url
+        (progn
+          (ensure-directories-exist
+           (directory-namestring img-store-url))
+          (copy-file img-url img-store-url)
+          img-store-url))))
 
 (restore-sql-reader-syntax-state)
