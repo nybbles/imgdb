@@ -40,6 +40,8 @@ backend containing metadata")))
   ;; Create any missing tables
   (create-all-tables store))
 
+;;;; Functions for indexing and removing images
+
 (defun index-img-drop (img-drop img-store dbconn-spec db-type)
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
   (let ((num-imgs 0))
@@ -122,11 +124,7 @@ backend containing metadata")))
                     :database dbconn)
     (delete-file img-url)))
 
-(defun select-img-records (select-columns &rest args)
-  (apply #'select-from-table *img-table* select-columns args))
-
-(defun update-img-records (&rest args)
-  (apply #'update-records *img-table* args))
+;;;; Functions for querying and updating images
 
 (defun img-record-exists (img-digest dbconn)
   (> (caar (select [count [digest]]
@@ -135,10 +133,18 @@ backend containing metadata")))
                    :database dbconn))
      0))
 
+(defun select-img-records (select-columns &rest args)
+  (apply #'select-from-table *img-table* select-columns args))
+
+(defun update-img-records (&rest args)
+  (apply #'update-records *img-table* args))
+
 (defun count-img-records (dbconn)
   (caar (select [count [*]]
                 :from *img-table*
                 :database dbconn)))
+
+;;;; Database table creation/deletion functions
 
 (defun create-img-table (dbconn-spec db-type)
   (with-database (dbconn dbconn-spec
@@ -155,7 +161,6 @@ backend containing metadata")))
                   ([title] (vector char 40))
                   ([description] blob))
                 :database dbconn)))
-
 (defun drop-img-table (dbconn-spec db-type)
   (with-database (dbconn dbconn-spec
                          :database-type db-type :pool t :if-exists :old)
@@ -173,7 +178,6 @@ backend containing metadata")))
     (create-img-tags-table dbconn-spec db-type))
   (unless (resize-cache-tables-exist? dbconn-spec db-type)
     (create-resize-cache-tables dbconn-spec db-type)))
-
 (defun drop-all-tables (dbconn-spec db-type)
   (drop-img-table dbconn-spec db-type)
   (drop-img-tags-table dbconn-spec db-type)
