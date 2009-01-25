@@ -1,7 +1,7 @@
 (in-package :imgdb-web)
 
 (defmethod setup-dispatch-table ((web imgdb-web-server))
-  (setf (dispatch-table web) '())
+  (clear-dispatch-table web)
   (mapcar
    #'(lambda (dispatch)
        (let ((dispatch-type (first dispatch))
@@ -43,3 +43,6 @@
 (defmethod create-dispatcher-fn-for-method
     ((web imgdb-web-server) dispatch-method)
   #'(lambda () (funcall dispatch-method web)))
+(defmethod clear-dispatch-table ((web imgdb-web-server))
+  (setf (dispatch-table web) '()))
+
