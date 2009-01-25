@@ -12,7 +12,16 @@
    (dispatch-table :initarg :dispatch-table
                    :initform (error "Dispatch table not provided")
                    :accessor dispatch-table
-                   :type list)))
+                   :type list)
+   (port :initarg :port
+         :initform (error "Port not provided")
+         :reader port
+         :type (integer 0 65335))
+   (is-running? :initform nil
+                :accessor is-running?
+                :type boolean)
+   (server-handle :initform nil
+                  :accessor server-handle)))
 
 (defun start-imgdb-web-server
     (&key db-conn-spec db-type
