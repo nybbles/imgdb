@@ -46,17 +46,21 @@
          (release-resize-cache-entry ,img-id (list ,size ,size)
                                      t ,dbconn-name)))))
 
-(defun select-resize-cache-entries (select-columns &rest args)
-  (apply #'select-from-table *img-resize-cache-table* select-columns args))
+(defmethod select-resize-cache-entries
+    ((store imgdb-store) dbconn select-columns &rest args)
+  (apply #'select-from-table dbconn *img-resize-cache-table*
+         select-columns args))
 
-(defun get-original-image-url (img-id dbconn)
+(defmethod get-original-image-url ((store imgdb-store) img-id dbconn)
   (car
    (select-img-records (list [url])
                        :where [= [digest] img-id]
                        :flatp t :database dbconn)))
 
-(defun get-resize-cache-image-url (img-id dimensions thumbnail dbconn)
+(defmethod get-resize-cache-image-url
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (car (select-resize-cache-entries
+        store dbconn
         (list [url])
         :where [and [= [originalimgid] img-id]
                     [= [width] (first dimensions)]
@@ -65,12 +69,12 @@
         :flatp t
         :database dbconn)))
 
-(defun generate-resize-cache-image-url
-    (original-img-id dimensions thumbnail database)
+(defmethod generate-resize-cache-image-url
+    ((store imgdb-store) original-img-id dimensions thumbnail dbconn)
   (namestring
    (let* ((width (write-to-string (first dimensions)))
           (height (write-to-string (second dimensions)))
-          (original-img-url (get-original-image-url original-img-id database))
+          (original-img-url (get-original-image-url original-img-id dbconn))
           (filename original-img-id)
           (filetype (pathname-type original-img-url)))
      (merge-pathnames
@@ -82,15 +86,18 @@
            *img-resize-cache-store*)
           *img-resize-cache-store*)))))
 
-(defun acquire-resize-cache-entry (img-id dimensions thumbnail dbconn)
+(defmethod acquire-resize-cache-entry
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (ecase (database-type dbconn)
     (:postgresql (acquire-resize-cache-entry-postgresql
-                  img-id dimensions thumbnail dbconn))))
+                  store img-id dimensions thumbnail dbconn))))
 
-(defun release-resize-cache-entry (img-id dimensions thumbnail dbconn)
-  (remove-resize-cache-entry-hold img-id dimensions thumbnail dbconn))
+(defmethod release-resize-cache-entry
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
+  (remove-resize-cache-entry-hold store img-id dimensions thumbnail dbconn))
 
-(defun add-resize-cache-entry (img-id dimensions thumbnail url valid dbconn)
+(defmethod add-resize-cache-entry
+    ((store imgdb-store) img-id dimensions thumbnail url valid dbconn)
   (insert-records :into *img-resize-cache-table*
                   :attributes '(originalimgid url width height
                                 thumbnail valid filesize)
@@ -99,7 +106,8 @@
                         (if thumbnail t "f") valid 0)
                   :database dbconn))
 
-(defun remove-resize-cache-entry (img-id dimensions thumbnail dbconn)
+(defmethod remove-resize-cache-entry
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (delete-records :from *img-resize-cache-table*
                   :where [and [= [originalimgid] img-id]
                               [= [width] (first dimensions)]
@@ -107,7 +115,8 @@
                               [= [thumbnail] thumbnail]]
                   :database dbconn))
 
-(defun get-resize-cache-entry-validity (img-id dimensions thumbnail dbconn)
+(defmethod get-resize-cache-entry-validity
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (let ((result (select-resize-cache-entries
                  (list [valid])
                  :where [and [= [originalimgid] img-id]
@@ -119,8 +128,8 @@
     (assert (not (> (length result) 1)))
     result))
 
-(defun set-resize-cache-entry-validity
-    (img-id dimensions thumbnail valid dbconn)
+(defmethod set-resize-cache-entry-validity
+    ((store imgdb-store) img-id dimensions thumbnail valid dbconn)
   (update-records *img-resize-cache-table*
                   :attributes '(valid)
                   :values (list valid)
@@ -130,8 +139,8 @@
                               [= [thumbnail] (if thumbnail t "f")]]
                   :database dbconn))
 
-(defun set-resize-cache-entry-filesize
-    (img-id dimensions thumbnail filesize dbconn)
+(defmethod set-resize-cache-entry-filesize
+    ((store imgdb-store) img-id dimensions thumbnail filesize dbconn)
   (update-records *img-resize-cache-table*
                   :attributes '(filesize)
                   :values (list filesize)
@@ -141,7 +150,8 @@
                               [= [thumbnail] (if thumbnail t "f")]]
                   :database dbconn))
 
-(defun add-resize-cache-entry-hold (img-id dimensions thumbnail dbconn)
+(defmethod add-resize-cache-entry-hold
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (insert-records :into *img-resize-cache-holds-table*
                   :attributes '(originalimgid width height
                                 thumbnail threadid usetime)
@@ -150,7 +160,8 @@
                                 (get-thread-id) (get-universal-time))
                   :database dbconn))
 
-(defun remove-resize-cache-entry-hold (img-id dimensions thumbnail dbconn)
+(defmethod remove-resize-cache-entry-hold
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (delete-records :from *img-resize-cache-holds-table*
                   :where [and [= [originalimgid] img-id]
                               [= [width] (first dimensions)]
@@ -169,10 +180,10 @@
    WHERE resizecacheholds.originalimgid IS NULL
    FOR UPDATE")
 
-(defun select-unused-resize-cache-entries (dbconn)
+(defmethod select-unused-resize-cache-entries ((store imgdb-store) dbconn)
   (query *select-unused-resize-cache-entries-query* :database dbconn))
 
-(defun flush-resize-cache (dbconn)
+(defmethod flush-resize-cache ((store imgdb-store) dbconn)
   (start-transaction :database dbconn)
   (let ((unused-resize-cache-entries
          (select-unused-resize-cache-entries dbconn))
@@ -187,76 +198,72 @@
         (when (not (probe-file url))
           (error 'inconsistent-cache-error))
         (delete-file url)
-        (remove-resize-cache-entry img-id (list width height) thumbnail dbconn)
+        (remove-resize-cache-entry img-id (list width height)
+                                   thumbnail dbconn)
         (incf (first result))
         (incf (second result) filesize))))
   (commit :database dbconn))
 
+(defmethod resize-cache-full? ((store imgdb-store) dbconn)
+  (> (get-total-resize-cache-file-size store dbconn)
+     *img-resize-cache-max-size*))
 
-(defun resize-cache-full? (dbconn)
-  (> (get-total-resize-cache-file-size dbconn) *img-resize-cache-max-size*))
-(defun get-total-resize-cache-file-size (dbconn)
+(defmethod get-total-resize-cache-file-size ((store imgdb-store) dbconn)
   (caar
    (select-resize-cache-entries
     (list [sum [filesize]]) :database dbconn)))
 
-(defun create-resize-cache-tables (dbconn-spec db-type)
-  (with-database (dbconn dbconn-spec
-                         :database-type db-type :pool t :if-exists :old)
-    (create-table *img-resize-cache-table*
-                  '(([originalimgid] (vector char 40) :not-null)
-                    ([width] integer :not-null)
-                    ([height] integer :not-null)
-                    ([thumbnail] boolean :not-null)
-                    ([url] string :not-null :unique)
-                    ([filesize] integer :not-null)
-                    ([valid] boolean))
-                  :constraints
-                  '("PRIMARY KEY (originalimgid, width, height, thumbnail)")
-                  :database dbconn)
-    (create-table *img-resize-cache-holds-table*
-                  '(([originalimgid] (vector char 40) :not-null)
-                    ([width] integer :not-null)
-                    ([height] integer :not-null)
-                    ([thumbnail] boolean :not-null)
-                    ([threadid] string :not-null)
-                    ([usetime] bigint :not-null))
-                  :constraints
-                  '("PRIMARY KEY (originalimgid, width, height, thumbnail, threadid)")
-                  :database dbconn)))
+(defmethod create-resize-cache-tables ((store imgdb-store) dbconn)
+  (create-table *img-resize-cache-table*
+                '(([originalimgid] (vector char 40) :not-null)
+                  ([width] integer :not-null)
+                  ([height] integer :not-null)
+                  ([thumbnail] boolean :not-null)
+                  ([url] string :not-null :unique)
+                  ([filesize] integer :not-null)
+                  ([valid] boolean))
+                :constraints
+                '("PRIMARY KEY (originalimgid, width, height, thumbnail)")
+                :database dbconn)
+  (create-table *img-resize-cache-holds-table*
+                '(([originalimgid] (vector char 40) :not-null)
+                  ([width] integer :not-null)
+                  ([height] integer :not-null)
+                  ([thumbnail] boolean :not-null)
+                  ([threadid] string :not-null)
+                  ([usetime] bigint :not-null))
+                :constraints
+                '("PRIMARY KEY (originalimgid, width, height, thumbnail, threadid)")
+                :database dbconn))
 
-(defun drop-resize-cache-tables (dbconn-spec db-type)
-  (with-database (dbconn dbconn-spec
-                         :database-type db-type :pool t :if-exists :old)
-    (drop-table *img-resize-cache-table* :database dbconn)
-    (drop-table *img-resize-cache-holds-table* :database dbconn)))
-(defun resize-cache-tables-exist? (dbconn-spec db-type)
-  (with-database (dbconn dbconn-spec
-                         :database-type db-type :pool t :if-exists :old)
-    (and (table-exists-p *img-resize-cache-table* :database dbconn)
-         (table-exists-p *img-resize-cache-holds-table* :database dbconn))))
+(defmethod drop-resize-cache-tables ((store imgdb-store) dbconn)
+  (drop-table *img-resize-cache-table* :database dbconn)
+  (drop-table *img-resize-cache-holds-table* :database dbconn))
 
-(defun create-resized-image (img-id dimensions thumbnail dbconn)
+(defmethod resize-cache-tables-exist? ((store imgdb-store) dbconn)
+  (and (table-exists-p *img-resize-cache-table* :database dbconn)
+       (table-exists-p *img-resize-cache-holds-table* :database dbconn)))
+
+(defmethod create-resized-image
+    ((store imgdb-store) img-id dimensions thumbnail dbconn)
   (let ((img-store-url
-         (car (select-img-records (list [url])
+         (car (select-img-records store dbconn (list [url])
                                   :where [= [digest] img-id]
-                                  :flatp t
-                                  :database dbconn)))
+                                  :flatp t)))
         (resize-cache-url
-         (get-resize-cache-image-url img-id dimensions thumbnail dbconn))
+         (get-resize-cache-image-url store img-id dimensions thumbnail dbconn))
         (width (first dimensions))
         (height (second dimensions)))
     (assert (not (null img-store-url)))
     (assert (not (null resize-cache-url)))
     (if thumbnail
-        (create-resized-image-thumbnail img-store-url resize-cache-url width)
-        (create-resized-full-image img-store-url resize-cache-url
-                                   width height))))
+        (create-resized-image-thumbnail store resize-cache-url width)
+        (create-resized-full-image store resize-cache-url width height))))
 
-(defun create-resized-full-image
-    (img-store-url resize-cache-url new-width new-height)
+(defmethod create-resized-full-image
+    ((store imgdb-store) resize-cache-url new-width new-height)
   (with-magick-wand (wand)
-    (magick-read-image wand img-store-url)
+    (magick-read-image wand (img-store store))
     (magick-adaptive-resize-image wand new-width new-height)
     (with-image-blob (wand img-blob img-blob-size)
       (with-open-file
@@ -267,10 +274,10 @@
          (vec 65536 vec-pos) (img-blob img-blob-size img-blob-pos)
          (write-sequence vec out :end vec-pos))))))
 
-(defun create-resized-image-thumbnail
-    (img-store-url resize-cache-url new-size)
+(defmethod create-resized-image-thumbnail
+    ((store imgdb-store) resize-cache-url new-size)
   (with-magick-wand (wand)
-    (magick-read-image wand img-store-url)
+    (magick-read-image wand (img-store store))
     (let* ((width (image-width wand))
            (height (image-height wand))
            (size (min width height))
