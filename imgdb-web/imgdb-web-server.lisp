@@ -23,21 +23,16 @@
    (server-handle :initform nil
                   :accessor server-handle)))
 
-(defun start-imgdb-web-server
-    (&key db-conn-spec db-type
-     (imgdb-web-root nil imgdb-web-root-provided-p) (port 4242))
-  (unless (null *imgdb-web-server*)
-    (error "imgdb-web-server already running"))
-  (if imgdb-web-root-provided-p
-      (setf *imgdb-web-root* imgdb-web-root)
-      (error "imgdb-web root not provided."))
-  (setf *imgdb-store-db-conn-spec* db-conn-spec)
-  (setf *imgdb-store-db-type* db-type)
-  (setup-dispatch-table)
-  (setf *imgdb-web-server* (start-server :port port)))
+(defmethod start-imgdb-web-server ((web imgdb-web-server))
+  (when (is-running? web)
+    (error "imgdb web server is already running"))
+  (setup-dispatch-table web)
+  (setf (server-handle web) (start-server :port (port web)))
+  (setf (is-running? web) t))
 
-(defun stop-imgdb-web-server ()
-  (when (null *imgdb-web-server*)
-    (error "No imgdb-web server running"))
-  (stop-server *imgdb-web-server*)
-  (setf *imgdb-web-server* nil))
+(defmethod stop-imgdb-web-server ((web imgdb-web-server))
+  (unless (is-running? web)
+    (error "imgdb web server is not running"))
+  (stop-server (server-handle web))
+  (setf (server-handle web) nil)
+  (setf (is-running? web) nil))
