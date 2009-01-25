@@ -4,9 +4,8 @@
                :cl-imgmagick :imgdb-store :ffi-utils)
   :components
   ((:file "packages")
-   (:file "imgdb-web-setup" :depends-on ("packages"))
-   (:file "xhtml-gen-utils" :depends-on ("imgdb-web-setup"))
-   (:file "img-urls" :depends-on ("imgdb-web-setup" "not-found-page"))
+   (:file "xhtml-gen-utils")
+   (:file "img-urls" :depends-on ("not-found-page"))
    (:file "not-found-page" :depends-on ("xhtml-gen-utils" "imgdb-web-server"))
    (:file "welcome-page" :depends-on ("xhtml-gen-utils" "date-cloud"))
    (:file "tag-cloud" :depends-on ("packages"))
@@ -18,6 +17,6 @@
           ("xhtml-gen-utils" "date-cloud" "img-query-constraint"))
    (:file "img-view" :depends-on
           ("xhtml-gen-utils" "tag-cloud" "img-urls"))
-   (:file "img-tags" :depends-on ("imgdb-web-setup"))
+   (:file "img-tags")
    (:file "dispatchers-setup"
           :depends-on ("imgdb-web-server"))))
