@@ -1,5 +1,19 @@
 (in-package :imgdb-web)
 
+(defparameter *handler-methods*
+  `((:regex "/.*" ,#'not-found-page)
+    (:prefix "/index.htm" ,#'welcome-page)
+    (:regex "^/$" ,#'welcome-page)
+    (:regex "/img-urls/thumbnails/[a-f0-9]+$" ,#'img-thumbnail-handler)
+    (:regex "/img-urls/[a-f0-9]+$" ,#'img-url-handler)
+    (:regex "/img-view$" ,#'img-view-page)
+    (:regex "/img-query$" ,#'img-query-page)
+    (:regex "/get-img-tags$" ,#'get-img-tags-handler)
+    (:regex "/add-img-tags$" ,#'add-img-tags-handler)
+    (:regex "/delete-img-tags$" ,#'delete-img-tags-handler)
+    (:regex "/set-img-title$" ,#'set-img-title-handler)
+    (:regex "/set-img-description$" ,#'set-img-description-handler)))
+
 (defmethod setup-dispatch-table ((web imgdb-web-server))
   (clear-dispatch-table web)
   (mapcar
@@ -17,18 +31,7 @@
            (push
             (funcall create-dispatcher-fn url dispatcher-fn)
             (dispatch-table web)))))
-   '((:regex "/.*" 'not-found-page)
-     (:prefix "/index.htm" 'welcome-page)
-     (:regex "^/$" 'welcome-page)
-     (:regex "/img-urls/thumbnails/[a-f0-9]+$" 'img-thumbnail-handler)
-     (:regex "/img-urls/[a-f0-9]+$" 'img-url-handler)
-     (:regex "/img-view$" 'img-view-page)
-     (:regex "/img-query$" 'img-query-page)
-     (:regex "/get-img-tags$" 'get-img-tags-handler)
-     (:regex "/add-img-tags$" 'add-img-tags-handler)
-     (:regex "/delete-img-tags$" 'delete-img-tags-handler)
-     (:regex "/set-img-title$" 'set-img-title-handler)
-     (:regex "/set-img-description$" 'set-img-description-handler)))
+   *handler-methods*)
   (push
    (create-folder-dispatcher-and-handler
     "/js/"
