@@ -149,6 +149,16 @@ backend containing metadata")))
                   :from *img-table*
                   :database dbconn))))
 
+(defun select-img-title (img-id dbconn)
+  (let ((result
+         (car (select-img-records (list [title])
+                                  :where [= [digest] img-id]
+                                  :flatp t
+                                  :database dbconn))))
+    (if (null result)
+        "Untitled"
+        result)))
+
 (defun select-img-records (select-columns &rest args)
   (apply #'select-from-table *img-table* select-columns args))
 

@@ -101,16 +101,6 @@
         result
         nil)))
 
-(defun select-img-title (img-id dbconn)
-  (let ((result
-         (car (select-img-records (list [title])
-                                  :where [= [digest] img-id]
-                                  :flatp t
-                                  :database dbconn))))
-    (if (null result)
-        "Untitled"
-        result)))
-
 (defun select-img-description (img-id dbconn)
   (let ((result
          (car (select-img-records (list [description])
