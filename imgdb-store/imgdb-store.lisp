@@ -44,25 +44,24 @@ backend containing metadata")))
 
 ;;;; Functions for indexing and removing images
 
-(defmethod index-img-drop ((store imgdb-store))
+(defmethod index-img-drop ((store imgdb-store) dbconn)
   "Indexes all images in img-drop by moving them to the img-store and creating an entry in the img-store database."
   (let ((num-imgs 0)
         (img-drop (img-drop store))
         (img-store (img-store store)))
-    (with-dbconn-info (dbconn (dbconn-info store))
-      (walk-directory
-       img-drop
-       (lambda (x)
-         (handler-bind
-             ((sql-database-data-error #'skip-img-record-creation))
-           (when (index-img x img-store dbconn)
-             (incf num-imgs))))
-       :test
-       (lambda (x)
-         (and (file-exists-p x)
-              (subsetp (list (pathname-type x)) *img-types*
-                       :test #'string-equal)))))
-    num-imgs))
+    (walk-directory
+     img-drop
+     (lambda (x)
+       (handler-bind
+           ((sql-database-data-error #'skip-img-record-creation))
+         (when (index-img x img-store dbconn)
+           (incf num-imgs))))
+     :test
+     (lambda (x)
+       (and (file-exists-p x)
+            (subsetp (list (pathname-type x)) *img-types*
+                     :test #'string-equal)))))
+  num-imgs)
 
 (defun skip-img-record-creation (c)
   (declare (ignore c))
@@ -71,11 +70,7 @@ backend containing metadata")))
         (invoke-restart restart)
         (error 'control-error))))
 
-(defmethod index-img ((store imgdb-store) img-url)
-  (with-dbconn-info (dbconn (dbconn-info store))
-    (index-img-with-dbconn store img-url dbconn)))
-
-(defmethod index-img-with-dbconn ((store imgdb-store) img-url dbconn)
+(defmethod index-img ((store imgdb-store) img-url dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
   (let ((img-store (img-store store))
@@ -122,103 +117,91 @@ backend containing metadata")))
       (with-thumbnail (in img-digest *default-thumbnail-size*)))
     img-inserted))
 
-(defmethod remove-img-record ((store imgdb-store) img-url)
+(defmethod remove-img-record ((store imgdb-store) img-url dbconn)
   "Removes the record indexed by id from the database"
-  (with-dbconn-info (dbconn (dbconn-info store))
-    (let ((img-urldigest (byte-array-to-hex-string
-                          (digest-sequence
-                           :sha1 (ascii-string-to-byte-array img-url)))))
-      (delete-records :from *img-table*
-                      :where [= [urldigest] img-urldigest]
-                      :database dbconn)
-      (delete-file img-url))))
+  (let ((img-urldigest (byte-array-to-hex-string
+                        (digest-sequence
+                         :sha1 (ascii-string-to-byte-array img-url)))))
+    (delete-records :from *img-table*
+                    :where [= [urldigest] img-urldigest]
+                    :database dbconn)
+    (delete-file img-url)))
 
 ;;;; Functions for querying and updating images
 
-(defmethod img-record-exists ((store imgdb-store) img-digest)
-  (with-dbconn-info (dbconn (dbconn-info store))
-    (> (caar (select [count [digest]]
-                     :from *img-table*
-                     :where [= [digest] img-digest]
-                     :database dbconn))
-       0)))
+(defmethod img-record-exists ((store imgdb-store) img-digest dbconn)
+  (> (caar (select [count [digest]]
+                   :from *img-table*
+                   :where [= [digest] img-digest]
+                   :database dbconn))
+     0))
 
-(defmethod count-img-records ((store imgdb-store))
-  (with-dbconn-info (dbconn (dbconn-info store))
-    (caar (select [count [*]]
-                  :from *img-table*
-                  :database dbconn))))
+(defmethod count-img-records ((store imgdb-store) dbconn)
+  (caar (select [count [*]]
+                :from *img-table*
+                :database dbconn)))
 
-(defun select-img-title (img-id dbconn)
+(defmethod select-img-title ((store imgdb-store) img-id dbconn)
   (let ((result
-         (car (select-img-records (list [title])
+         (car (select-img-records store dbconn
+                                  (list [title])
                                   :where [= [digest] img-id]
-                                  :flatp t
-                                  :database dbconn))))
+                                  :flatp t))))
     (if (null result)
         "Untitled"
         result)))
 
-(defun select-img-records (select-columns &rest args)
-  (apply #'select-from-table *img-table* select-columns args))
+(defmethod select-img-records ((store imgdb-store) dbconn
+                               select-columns &rest args)
+  (apply #'select-from-table dbconn *img-table* select-columns args))
 
-(defmethod update-img-title ((store imgdb-store) img-id title)
-  (with-dbconn-info (dbconn (dbconn-info store))
-    (update-img-title store img-id title dbconn)))
-
-(defmethod update-img-title-with-dbconn
-    ((store imgdb-store) img-id title dbconn)
+(defmethod update-img-title ((store imgdb-store) img-id title dbconn)
   (with-transaction (:database dbconn)
     (if (img-record-exists img-id dbconn)
         (progn
           (update-img-records
+           store dbconn
            :av-pairs (list (list 'title (if (scan "^\s*$" title) nil title)))
-           :where [= [digest] img-id]
-           :database dbconn)
-          (select-img-title img-id dbconn))
+           :where [= [digest] img-id])
+          (select-img-title store img-id dbconn))
         "Untitled")))
 
-(defun update-img-records (&rest args)
-  (apply #'update-records *img-table* args))
+(defmethod update-img-records ((store imgdb-store) dbconn &rest args)
+  (apply #'update-records *img-table* args :database dbconn))
 
 ;;;; Database table creation/deletion functions
-(defmethod create-img-table ((store imgdb-store))
-  (with-dbconn-info (dbconn (dbconn-info store))
-      (create-table *img-table*
-                    '(([digest] (vector char 40) :not-null :unique :primary-key)
-                      ([urldigest] (vector char 40) :not-null)
-                      ([url] string :not-null :unique)
-                      ([width] integer :not-null)
-                      ([height] integer :not-null)
-                      ([year] integer)
-                      ([month] integer)
-                      ([day] integer)
-                      ([title] (vector char 40))
-                      ([description] blob))
-                    :database dbconn)))
+(defmethod create-img-table ((store imgdb-store) dbconn)
+  (create-table *img-table*
+                '(([digest] (vector char 40) :not-null :unique :primary-key)
+                  ([urldigest] (vector char 40) :not-null)
+                  ([url] string :not-null :unique)
+                  ([width] integer :not-null)
+                  ([height] integer :not-null)
+                  ([year] integer)
+                  ([month] integer)
+                  ([day] integer)
+                  ([title] (vector char 40))
+                  ([description] blob))
+                :database dbconn))
 
-(defmethod drop-img-table ((store imgdb-store))
-  (with-dbconn-info (dbconn (dbconn-info store))
-      (drop-table *img-table* :database dbconn)))
-(defmethod img-table-exists ((store imgdb-store))
-  (with-dbconn-info (dbconn (dbconn-info store))
-      (table-exists-p *img-table* :database dbconn)))
+(defmethod drop-img-table ((store imgdb-store) dbconn)
+  (drop-table *img-table* :database dbconn))
 
-(defmethod create-all-tables ((store imgdb-store))
-  (unless (img-table-exists store)
-    (create-img-table store))
-  (unless (img-tags-table-exists store)
-    (create-img-tags-table store))
-  (unless (resize-cache-tables-exist? store)
-    (create-resize-cache-tables store)))
+(defmethod img-table-exists ((store imgdb-store) dbconn)
+  (table-exists-p *img-table* :database dbconn))
 
-(defmethod drop-all-tables ((store imgdb-store))
-  (let* ((dbconn-info (dbconn-info store))
-         (dbconn-spec (dbconn-spec dbconn-info))
-         (dbconn-type (dbconn-type dbconn-info)))
-    (drop-img-table dbconn-spec dbconn-type)
-    (drop-img-tags-table dbconn-spec dbconn-type)
-    (drop-resize-cache-tables dbconn-spec dbconn-type)))
+(defmethod create-all-tables ((store imgdb-store) dbconn)
+  (unless (img-table-exists store dbconn)
+    (create-img-table store dbconn))
+  (unless (img-tags-table-exists store dbconn)
+    (create-img-tags-table store dbconn))
+  (unless (resize-cache-tables-exist? store dbconn)
+    (create-resize-cache-tables store dbconn)))
+
+(defmethod drop-all-tables ((store imgdb-store) dbconn)
+  (drop-img-table store dbconn)
+  (drop-img-tags-table store dbconn)
+  (drop-resize-cache-tables store dbconn))
 
 ;;;; Utility macros and functions
 
