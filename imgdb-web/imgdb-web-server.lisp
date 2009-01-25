@@ -1,5 +1,19 @@
 (in-package :imgdb-web)
 
+(defclass imgdb-web-server ()
+  ((image-store :initarg :image-store
+                :initform (error "Image store not provided")
+                :reader image-store
+                :type imgdb-store:imgdb-store)
+   (web-root :initarg :web-root
+             :initform (error "Web root not provided")
+             :reader web-root
+             :type pathname)
+   (dispatch-table :initarg :dispatch-table
+                   :initform (error "Dispatch table not provided")
+                   :accessor dispatch-table
+                   :type list)))
+
 (defun start-imgdb-web-server
     (&key db-conn-spec db-type
      (imgdb-web-root nil imgdb-web-root-provided-p) (port 4242))
