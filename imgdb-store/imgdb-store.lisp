@@ -212,24 +212,6 @@ backend containing metadata")))
 
 ;;;; Utility macros and functions
 
-;;; Utility macros for opening pooled database connections
-(defmacro with-dbconn-info ((dbconn-var dbconn-info-var) &body body)
-  (let ((dbconn-spec-var (gensym "DBCONN-SPEC-"))
-        (dbconn-type-var (gensym "DBCONN-TYPE-")))
-  `(let ((,dbconn-spec-var (dbconn-spec ,dbconn-info-var))
-         (,dbconn-type-var (dbconn-type ,dbconn-info-var)))
-     (with-pooled-dbconn (,dbconn-var ,dbconn-spec-var ,dbconn-type-var)
-       ,@body))))
-
-(defmacro with-pooled-dbconn
-    ((dbconn-var dbconn-spec-var dbconn-type-var) &body body)
-  `(with-database
-       (,dbconn-var ,dbconn-spec-var
-                    :database-type ,dbconn-type-var
-                    :pool t
-                    :if-exists :old)
-     ,@body))
-
 ;;; Utility functions for pathnames in image store directory
 (defun get-img-store-url (img-url year month day img-store)
   (merge-pathnames

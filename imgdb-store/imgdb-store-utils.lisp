@@ -25,4 +25,22 @@
       ("{([0-9A-F]+)}>$" (write-to-string thread))
     (concatenate 'string "localhost:" tid)))
 
+;;; Utility macros for opening pooled database connections
+(defmacro with-dbconn-info ((dbconn-var dbconn-info-var) &body body)
+  (let ((dbconn-spec-var (gensym "DBCONN-SPEC-"))
+        (dbconn-type-var (gensym "DBCONN-TYPE-")))
+  `(let ((,dbconn-spec-var (dbconn-spec ,dbconn-info-var))
+         (,dbconn-type-var (dbconn-type ,dbconn-info-var)))
+     (with-pooled-dbconn (,dbconn-var ,dbconn-spec-var ,dbconn-type-var)
+       ,@body))))
+
+(defmacro with-pooled-dbconn
+    ((dbconn-var dbconn-spec-var dbconn-type-var) &body body)
+  `(with-database
+       (,dbconn-var ,dbconn-spec-var
+                    :database-type ,dbconn-type-var
+                    :pool t
+                    :if-exists :old)
+     ,@body))
+
 (restore-sql-reader-syntax-state)
