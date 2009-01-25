@@ -7,12 +7,14 @@
 (defparameter *default-thumbnail-size* 100)
 
 (defclass dbconn-info ()
-  ((dbconn-spec :initarg :conn-spec
-              :initform
-              (error "Database connection specification not provided"))
-   (dbconn-type :initarg :conn-type
-              :initform
-              (error "Database connection type not provided"))))
+  ((dbconn-spec :initarg :dbconn-spec
+                :initform
+                (error "Database connection specification not provided")
+                :reader dbconn-spec)
+   (dbconn-type :initarg :dbconn-type
+                :initform
+                (error "Database connection type not provided")
+                :reader dbconn-type)))
 
 (defclass imgdb-store ()
   ((img-drop :initarg :img-drop
@@ -70,10 +72,10 @@ backend containing metadata")))
         (error 'control-error))))
 
 (defmethod index-img ((store imgdb-store) img-url)
-  (with-dbconn-info (dbconn (dbconn-info imgdb-store))
-    (index-img store img-url dbconn)))
+  (with-dbconn-info (dbconn (dbconn-info store))
+    (index-img-with-dbconn store img-url dbconn)))
 
-(defmethod index-img ((store imgdb-store) img-url dbconn)
+(defmethod index-img-with-dbconn ((store imgdb-store) img-url dbconn)
   "Creates a record of the image in the database"
   ;; How can the insertion of duplicate file entries be handled?
   (let ((img-store (img-store store))
@@ -154,7 +156,8 @@ backend containing metadata")))
   (with-dbconn-info (dbconn (dbconn-info store))
     (update-img-title store img-id title dbconn)))
 
-(defmethod update-img-title ((store imgdb-store) img-id title dbconn)
+(defmethod update-img-title-with-dbconn
+    ((store imgdb-store) img-id title dbconn)
   (with-transaction (:database dbconn)
     (if (img-record-exists img-id dbconn)
         (progn
