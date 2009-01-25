@@ -46,7 +46,8 @@ backend containing metadata")))
 
 (defmethod initialize-instance :after ((store imgdb-store) &key)
   ;; Create any missing tables
-  (create-all-tables store))
+  (with-dbconn-info (dbconn (dbconn-info store))
+    (create-all-tables store dbconn)))
 
 ;;;; Functions for indexing and removing images
 
