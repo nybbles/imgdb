@@ -67,8 +67,8 @@ backend containing metadata")))
      (lambda (x)
        (and (file-exists-p x)
             (subsetp (list (pathname-type x)) *img-types*
-                     :test #'string-equal)))))
-  num-imgs)
+                     :test #'string-equal))))
+    num-imgs))
 
 (defun skip-img-record-creation (c)
   (declare (ignore c))
