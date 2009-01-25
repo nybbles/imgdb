@@ -150,7 +150,11 @@ backend containing metadata")))
 (defun select-img-records (select-columns &rest args)
   (apply #'select-from-table *img-table* select-columns args))
 
-(defun update-img-title (img-id title dbconn)
+(defmethod update-img-title ((store imgdb-store) img-id title)
+  (with-dbconn-info (dbconn (dbconn-info store))
+    (update-img-title store img-id title dbconn)))
+
+(defmethod update-img-title ((store imgdb-store) img-id title dbconn)
   (with-transaction (:database dbconn)
     (if (img-record-exists img-id dbconn)
         (progn
