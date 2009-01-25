@@ -6,14 +6,14 @@
    #'(lambda (dispatch)
        (let ((dispatch-type (first dispatch))
              (url (second dispatch))
-             (method (third dispatch)))
+             (handler-method (third dispatch)))
          (let ((create-dispatcher-fn
                 (case dispatch-type
                   (:regex #'create-regex-dispatcher)
                   (:prefix #'create-prefix-dispatcher)
                   (otherwise (error "Invalid dispatcher type"))))
                (dispatcher-fn
-                (create-dispatcher-fn-for-method web method)))
+                (create-dispatcher-fn-for-handler-method web handler-method)))
            (push
             (funcall create-dispatcher-fn url dispatcher-fn)
             (dispatch-table web)))))
