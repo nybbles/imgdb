@@ -1,6 +1,6 @@
 (in-package :imgdb-web)
 
-(defun not-found-page ()
+(defmethod not-found-page ((web imgdb-web-server))
   (with-html-output-to-string (output nil :prologue t)
     (:html
      (str (generate-html-head "imgdb - 404 (page not found)"))
