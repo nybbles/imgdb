@@ -29,6 +29,12 @@
               :reader img-store
               :documentation
               "The location where indexed images are stored.")
+   (resize-cache :initarg :resize-cache
+                 :initform (error "No resize cache location provided")
+                 :type pathname
+                 :reader resize-cache
+                 :documentation
+                 "The location where cached resized images are stored")
    (dbconn-info :initarg :dbconn-info
                 :initform
                 (error "No database connection information provided")
