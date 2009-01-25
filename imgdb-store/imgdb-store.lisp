@@ -150,6 +150,17 @@ backend containing metadata")))
 (defun select-img-records (select-columns &rest args)
   (apply #'select-from-table *img-table* select-columns args))
 
+(defun update-img-title (img-id title dbconn)
+  (with-transaction (:database dbconn)
+    (if (img-record-exists img-id dbconn)
+        (progn
+          (update-img-records
+           :av-pairs (list (list 'title (if (scan "^\s*$" title) nil title)))
+           :where [= [digest] img-id]
+           :database dbconn)
+          (select-img-title img-id dbconn))
+        "Untitled")))
+
 (defun update-img-records (&rest args)
   (apply #'update-records *img-table* args))
 

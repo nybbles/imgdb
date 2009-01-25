@@ -111,17 +111,6 @@
         "Untitled"
         result)))
 
-(defun update-img-title (img-id title dbconn)
-  (with-transaction (:database dbconn)
-    (if (img-record-exists img-id dbconn)
-        (progn
-          (update-img-records
-           :av-pairs (list (list 'title (if (scan "^\s*$" title) nil title)))
-           :where [= [digest] img-id]
-           :database dbconn)
-          (select-img-title img-id dbconn))
-        "Untitled")))
-
 (defun select-img-description (img-id dbconn)
   (let ((result
          (car (select-img-records (list [description])
