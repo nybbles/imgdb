@@ -192,19 +192,6 @@
         (incf (second result) filesize))))
   (commit :database dbconn))
 
-(defun resize-cache-entry-valid? (img-id dimensions thumbnail dbconn)
-  (let ((result
-         (select-resize-cache-entries
-          (list [valid])
-          :where
-          [and [= [originalimgid] img-id]
-               [= [width] (first dimensions)]
-               [= [height] (second dimensions)]
-               [= [thumbnail] (if thumbnail t "f")]]
-          :flatp t
-          :database dbconn)))
-    (assert (= (length result) 1))
-    (first result)))
 
 (defun resize-cache-full? (dbconn)
   (> (get-total-resize-cache-file-size dbconn) *img-resize-cache-max-size*))
