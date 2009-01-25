@@ -10,7 +10,7 @@
              :reader web-root
              :type pathname)
    (port :initarg :port
-         :initform (error "Port not provided")
+         :initform 4242
          :reader port
          :type (integer 0 65335))
    (is-running? :initform nil
