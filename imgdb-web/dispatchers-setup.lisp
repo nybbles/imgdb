@@ -43,9 +43,9 @@
     (merge-pathnames "css/imgdb-web.css" (web-root web)))
    (dispatch-table web)))
 
-(defmethod create-dispatcher-fn-for-method
-    ((web imgdb-web-server) dispatch-method)
-  #'(lambda () (funcall dispatch-method web)))
 (defmethod clear-dispatch-table ((web imgdb-web-server))
   (setf (dispatch-table web) '()))
 
+(defmethod create-dispatcher-fn-for-handler-method
+    ((web imgdb-web-server) handler-method)
+  #'(lambda () (funcall handler-method web)))
