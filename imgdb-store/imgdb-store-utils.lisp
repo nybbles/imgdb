@@ -25,6 +25,10 @@
     (concatenate 'string "localhost:" tid)))
 
 ;;; Utility macros for opening pooled database connections
+(defmacro with-dbconn-for-image-store ((dbconn-var img-store-var) &body body)
+  `(with-dbconn-info (,dbconn-var (dbconn-info ,img-store-var))
+     ,@body))
+
 (defmacro with-dbconn-info ((dbconn-var dbconn-info-var) &body body)
   (let ((dbconn-spec-var (gensym "DBCONN-SPEC-"))
         (dbconn-type-var (gensym "DBCONN-TYPE-")))

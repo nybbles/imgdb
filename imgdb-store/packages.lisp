@@ -17,5 +17,6 @@
            :with-thumbnail :with-resized-image
            :get-img-tags :add-img-tags :delete-img-tags
            :imgdb-store :dbconn-info
+           :with-dbconn-for-image-store
            :*img-resize-cache-store*
            :*img-resize-cache-conn-spec* :*img-resize-cache-conn-type*))
