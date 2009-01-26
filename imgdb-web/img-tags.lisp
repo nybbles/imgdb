@@ -1,6 +1,6 @@
 (in-package :imgdb-web)
 
-(defun get-img-tags-handler ()
+(defmethod get-img-tags-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -16,7 +16,7 @@
              "taglist"
              (make-json-array (get-img-tags img-id dbconn)))))))))))
 
-(defun add-img-tags-handler ()
+(defmethod add-img-tags-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -36,7 +36,7 @@
              "taglist"
              (make-json-array (add-img-tags img-id tags dbconn)))))))))))
 
-(defun delete-img-tags-handler ()
+(defmethod delete-img-tags-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -53,7 +53,7 @@
              "taglist"
              (make-json-array (delete-img-tags img-id tags dbconn)))))))))))
 
-(defun get-img-title-handler ()
+(defmethod get-img-title-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -69,7 +69,7 @@
              "title"
              (select-img-title img-id dbconn))))))))))
 
-(defun set-img-title-handler ()
+(defmethod set-img-title-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -86,7 +86,7 @@
              "title"
              (update-img-title img-id title dbconn))))))))))
 
-(defun get-img-description-handler ()
+(defmethod get-img-description-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -102,7 +102,7 @@
              "description"
              (select-img-description img-id dbconn))))))))))
 
-(defun set-img-description-handler ()
+(defmethod set-img-description-handler ((web imgdb-web-server))
   (let ((json (from-json (raw-post-data :force-text t))))
     (setf (content-type *reply*) "application/json")
     (comment-filter-json
@@ -118,6 +118,8 @@
             (make-json-object-element
              "description"
              (update-img-description img-id description dbconn))))))))))
+
+;;;; JSON utility functions
 
 (defun make-json-object (elements)
   (cons :object elements))

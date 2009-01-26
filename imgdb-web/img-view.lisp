@@ -14,7 +14,7 @@
          (format nil "GetLocalizedDateString(~D, ~D, ~D)"
                  year (- month 1) day)))))
 
-(defun img-view-page ()
+(defmethod img-view-page ((web imgdb-web-server))
   (let ((img-id (cdr (assoc "id" (get-parameters) :test #'equal))))
     (with-database (dbconn *imgdb-store-db-conn-spec*
                            :database-type *imgdb-store-db-type*

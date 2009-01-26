@@ -2,8 +2,8 @@
 
 (locally-enable-sql-reader-syntax)
 
-(defun welcome-page ()
-  (img-query-page))
+(defmethod welcome-page ((web imgdb-web-server))
+  (img-query-page web))
 
 (defun select-random-img-id (dbconn)
   (caar (select-img-records (list [digest])

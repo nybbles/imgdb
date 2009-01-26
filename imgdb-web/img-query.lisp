@@ -2,7 +2,7 @@
 
 (define-condition invalid-img-query-error () ())
 
-(defun img-query-page ()
+(defmethod img-query-page ((web imgdb-web-server))
   (handler-case
       (let* ((params (get-parameters))
              (constraints (translate-get-parameters-to-constraints params))
@@ -31,4 +31,4 @@
                     (str
                      (create-links-for-query-resultset
                       constraints current 40 dbconn))))))))
-    (invalid-img-query-error () (not-found-page))))
+    (invalid-img-query-error () (not-found-page web))))

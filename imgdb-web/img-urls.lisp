@@ -7,7 +7,7 @@
             :reader img-url
             :type '(simple-array character))))
 
-(defun img-url-handler ()
+(defmethod img-url-handler ((web imgdb-web-server))
   (handler-case
       (with-database (dbconn *imgdb-store-db-conn-spec*
                              :database-type *imgdb-store-db-type*
@@ -24,7 +24,7 @@
                  (transfer-unresized-image img-store-url))))))
     (invalid-img-url-request () (not-found-page))))
 
-(defun img-thumbnail-handler ()
+(defmethod img-thumbnail-handler ((web imgdb-web-server))
   (handler-case
       (with-database (dbconn *imgdb-store-db-conn-spec*
                              :database-type *imgdb-store-db-type*
