@@ -42,18 +42,18 @@
 (defmethod img-tags-table-exists ((store imgdb-store) dbconn)
   (table-exists-p *img-tags-table* :database dbconn))
 
-(defun select-num-imgs-for-tag-type
-    (tag-type constraints &key database (order :desc))
+(defmethod select-num-imgs-for-tag-type
+    ((store imgdb-store) tag-type constraints dbconn &key (order :desc))
+  "Returns number of elements with a certain tag value, subject to constraints."
   (let* ((tag-type-column (sql-expression
                            :attribute (intern (string-upcase tag-type))))
          (select-columns (list tag-type-column [count [*]]))
          (where-clause (translate-constraints-to-sql constraints))
          (order-by-clause (list (list tag-type-column order)))
-         (result (select-img-records select-columns
+         (result (select-img-records store dbconn select-columns
                                      :where where-clause
                                      :group-by tag-type-column
-                                     :order-by order-by-clause
-                                     :database database))
+                                     :order-by order-by-clause))
          (last-tag (car (last result))))
     ;; TODO (NM): Find out what this code is doing and document it.
     (if (and (eq order :asc) (not (null result)) (null (car last-tag)))
