@@ -12,7 +12,7 @@
    (:file "date-cloud" :depends-on ("tag-cloud"))
    (:file "img-query-constraint" :depends-on ("packages"))
    (:file "img-thumbnail-grid" :depends-on ("packages" "img-query-constraint"))
-   (:file "imgdb-web-server" :depends-on ("imgdb-web-setup"))
+   (:file "imgdb-web-server")
    (:file "img-query" :depends-on
           ("xhtml-gen-utils" "date-cloud" "img-query-constraint"))
    (:file "img-view" :depends-on
