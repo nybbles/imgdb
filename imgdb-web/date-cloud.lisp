@@ -53,22 +53,4 @@
                                    pruned-constraints
                                    :database database :order order))))
 
-(defun select-num-imgs-for-tag-type
-    (tag-type constraints &key database (order :desc))
-  (let* ((tag-type-column (sql-expression
-                           :attribute (intern (string-upcase tag-type))))
-         (select-columns (list tag-type-column [count [*]]))
-         (where-clause (translate-constraints-to-sql constraints))
-         (order-by-clause (list (list tag-type-column order)))
-         (result (select-img-records select-columns
-                                     :where where-clause
-                                     :group-by tag-type-column
-                                     :order-by order-by-clause
-                                     :database database))
-         (last-tag (car (last result))))
-    ;; TODO (NM): Find out what this code is doing and document it.
-    (if (and (eq order :asc) (not (null result)) (null (car last-tag)))
-        (push last-tag (subseq result 0 (- (length result) 1)))
-        result)))
-
 (restore-sql-reader-syntax-state)
