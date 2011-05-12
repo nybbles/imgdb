@@ -9,7 +9,8 @@ There is some stuff I'm proud of though, like the cache for image resizing.
 From what I can remember, the server runs on OS X and Linux and requires the
 imagemagick libraries and a postgres database server. The cache for image
 resizing uses the postgres server to do concurrency stuff - it's pretty sweet,
-IMO.
+IMO. It's here, if you care:
+http://github.com/nybbles/imgdb/tree/code-cleanup/imgdb-store.
 
 In retrospect, and given all the exciting new developments in both web frontend
 and backend, I probably wouldn't build a website like this. But it was fun at
