@@ -1,0 +1,19 @@
+I started this project to learn about web development and about Common Lisp. It
+is basically a very lame Flickr clone. It uses the Hunchentoot framework for
+the backend and plain HTML with some CSS, Javascript, Dojo and AJAX calls for
+the frontend. I have not touched this code in more than 2 years and I have
+already cringed at the little bits of code I've seen tonight.
+
+There is some stuff I'm proud of though, like the cache for image resizing.
+
+From what I can remember, the server runs on OS X and Linux and requires the
+imagemagick libraries and a postgres database server. The cache for image
+resizing uses the postgres server to do concurrency stuff - it's pretty sweet,
+IMO.
+
+In retrospect, and given all the exciting new developments in both web frontend
+and backend, I probably wouldn't build a website like this. But it was fun at
+the time.
+
+-- Nimalan
+
